@@ -1,0 +1,296 @@
+/* =========================================
+   RESPONSIVE MEDIA QUERIES
+   ========================================= */
+
+/* --- 1. Large Screens & TV (1400px +) --- */
+@media screen and (min-width: 1400px) {
+    .container {
+        max-width: 1320px; /* Container width increase for huge screens */
+    }
+
+    .hero h1 {
+        font-size: 64px; /* Bigger typography */
+    }
+
+    .hero-subtext {
+        font-size: 20px;
+        max-width: 600px;
+    }
+
+    .session-image img {
+        height: 240px; /* Taller images on big screens */
+    }
+}
+
+/* --- 2. Laptops & Tablet Landscape (1024px to 1199px) --- */
+@media screen and (max-width: 1199px) {
+    /* Navbar Adjustment */
+    .nav-links {
+        gap: 20px;
+    }
+    
+    .nav-links a, 
+    .login-link, 
+    .btn {
+        font-size: 14px;
+    }
+
+    /* Hero Text Adjustments */
+    .hero h1 {
+        font-size: 42px;
+    }
+
+    /* Sessions Grid - 3 se 2 columns better rahenge yaha se */
+    .sessions-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+}
+
+/* --- 3. Tablet Portrait & Small Laptops (769px to 1023px) --- */
+@media screen and (max-width: 1023px) {
+    /* Navbar: Space bachaane ke liye padding kam */
+    .container {
+        padding: 0 24px;
+    }
+
+    .nav-links {
+        display: none; /* Tablet pe links hide kar rahe hain to avoid overflow without hamburger, 
+                          OR agar dikhana hai to niche wala code use karein: */
+        /* display: flex; gap: 15px; */
+    }
+    /* Note: Bina HTML change ke hamburger menu nahi banega, 
+       isliye tablet pe links ya to small karein ya hide karein. 
+       Better UX ke liye main ise stack kar raha hu niche (900px breakpoint pe). */
+
+    /* Hero Section */
+    .hero h1 {
+        font-size: 36px;
+    }
+    
+    .hero-container {
+        gap: 30px;
+    }
+
+    .hero-image {
+        max-width: 100%;
+    }
+
+    /* Sessions: Switch to 2 Columns */
+    .sessions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Features: Switch to Vertical Layout (Column) */
+    .features-container {
+        grid-template-columns: 1fr; /* Single column */
+        text-align: center;
+        gap: 50px;
+    }
+
+    .features-content h2 {
+        margin: 0 auto 40px auto; /* Center alignment */
+    }
+
+    .feature-item {
+        justify-content: flex-start;
+        text-align: left; /* Text left aligned hi achha lagega */
+    }
+
+    /* Feature image ko center karna */
+    .features-visual {
+        order: -1; /* Image upar dikhane ke liye (Optional) */
+        margin-bottom: 20px;
+    }
+}
+
+/* --- 4. Mobile & Large Tablets (Max Width: 900px) ---
+   Yaha hum major structural changes karenge (Grid to Stack) 
+*/
+@media screen and (max-width: 900px) {
+    /* --- Navbar Stack Transformation --- */
+    /* Kyunki JS/HTML allowed nahi hai, hum navbar ko tall banayenge */
+    .navbar {
+        height: auto; /* Fixed height hatayi */
+        padding: 15px 0;
+        position: relative; /* Sticky mobile pe problem kar sakta hai agar menu bada ho */
+    }
+
+   .nav-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0px; /* Gap ko 0 kar diya taki lines ekdum paas aa jayein */
+}
+
+/* Logo ko Order 1 (Sabse pehle) */
+.logo {
+    order: 1;
+    flex-grow: 0; /* Logo failna nahi chahiye */
+}
+
+/* Auth Buttons ko Order 2 (Logo ke baad right side) */
+.nav-auth {
+    order: 2;
+    width: auto;  /* Full width nahi chahiye, sirf buttons jitni jagah le */
+    justify-content: flex-end; /* Right side align */
+    gap: 10px;    /* Buttons ke beech ka gap */
+}
+
+/* Login link aur Button ki size adjust (Mobile ke liye thoda chota) */
+.nav-auth .login-link, 
+.nav-auth .btn {
+    font-size: 13px; /* Font thoda chota taki fit ho jaye */
+    padding: 8px 12px; /* Padding kam ki */
+}
+
+.nav-links {
+    order: 3;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center; /* <--- Ab ye Center me align karega */
+    align-items: center;
+    gap: 15px;               /* Gap thoda kam kiya taki chote phone me fit ho jaye */
+    
+    /* Vertical Spacing */
+    margin-top: 2px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+    
+    /* Scrolling Settings */
+    overflow-x: auto;
+    white-space: nowrap;
+    
+    /* Scrollbar Hidden */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Chrome/Safari Scrollbar Hide */
+.nav-links::-webkit-scrollbar {
+    display: none;
+}
+
+.nav-links li {
+    padding: 0;
+}
+
+/* Font size maintain */
+.nav-links a {
+    font-size: 13px;
+}
+
+    .nav-auth {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* --- Hero Layout --- */
+    .hero {
+        padding: 40px 0 60px;
+        text-align: center;
+    }
+
+    .hero-container {
+        grid-template-columns: 1fr; /* Single Column */
+        gap: 50px;
+    }
+
+    /* Hero items centering */
+    .hero-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .hero-subtext {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .trusted-icons {
+        justify-content: center;
+        flex-wrap: wrap; /* Icons overflow na karein */
+    }
+
+    .hero-buttons {
+        justify-content: center;
+    }
+}
+
+/* --- 5. Small Mobile Devices (Max Width: 600px) --- */
+@media screen and (max-width: 600px) {
+    /* --- Global Spacing --- */
+    .container {
+        padding: 0 16px;
+    }
+
+    /* --- Hero Section --- */
+    .hero h1 {
+        font-size: 32px; /* Smaller Font */
+    }
+
+    .hero-buttons {
+        flex-direction: column; /* Buttons ek ke niche ek */
+        width: 100%;
+    }
+
+    .btn-lg {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* --- Sessions Section --- */
+    .sessions-grid {
+        grid-template-columns: 1fr; /* 1 Column (Cards stack vertically) */
+    }
+
+    .session-image img {
+        height: 180px;
+    }
+
+    /* --- Features Section --- */
+    .features-section {
+        padding: 60px 0;
+    }
+    
+    .feature-item {
+        flex-direction: column; /* Icon upar, text niche */
+        align-items: center;
+        text-align: center;
+    }
+
+    .f-icon-box {
+        margin-bottom: 10px;
+    }
+
+    /* --- Footer --- */
+    .footer-container {
+        padding: 0 10px;
+    }
+    
+    .footer-links {
+        flex-direction: column;
+        gap: 20px;
+    }
+}
+
+/* --- 6. Extra Small Mobile (Fold Phones) (Max Width: 380px) --- */
+@media screen and (max-width: 380px) {
+    .hero h1 {
+        font-size: 28px;
+    }
+    
+    .brand-name {
+        font-size: 14px;
+    }
+
+    .session-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}
