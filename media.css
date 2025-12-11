@@ -116,28 +116,32 @@
         position: relative; /* Sticky mobile pe problem kar sakta hai agar menu bada ho */
     }
 
-   .nav-container {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0px; /* Gap ko 0 kar diya taki lines ekdum paas aa jayein */
-}
+    .nav-container {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;  /* <-- LOGO CENTER ALIGN */
+        align-items: center;
+        gap: 0px;
+    }
 
 /* Logo ko Order 1 (Sabse pehle) */
 .logo {
-    order: 1;
-    flex-grow: 0; /* Logo failna nahi chahiye */
-}
+        order: 1;
+        width: 100%;              /* <-- Full row cover karega */
+        display: flex;
+        justify-content: center;  /* <-- Image ko center karega */
+        flex-grow: 0;
+        margin-bottom: 10px;
+    }
 
 /* Auth Buttons ko Order 2 (Logo ke baad right side) */
-.nav-auth {
-    order: 2;
-    width: auto;  /* Full width nahi chahiye, sirf buttons jitni jagah le */
-    justify-content: flex-end; /* Right side align */
-    gap: 10px;    /* Buttons ke beech ka gap */
-}
+ .nav-auth {
+        order: 2;
+        width: auto;
+        justify-content: flex-end;
+        gap: 10px;
+    }
 
 /* Login link aur Button ki size adjust (Mobile ke liye thoda chota) */
 .nav-auth .login-link, 
