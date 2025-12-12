@@ -279,20 +279,25 @@ ul { list-style: none; }
 }
 
 .sessions-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;             /* Grid ki jagah Flexbox */
+  justify-content: center;   /* Ye cards ko horizontal center mein layega */
+  flex-wrap: wrap;           /* Screen choti hone par cards niche shift ho jayenge */
   gap: 28px;
 }
 
 .session-card {
-  border: 1px solid var(--border-color); /* Updated variable */
+  width: 100%;               /* Mobile ke liye responsive banayega */
+  max-width: 380px;          /* Card ko 3-column jitna hi bada rakhega, jyada stretch nahi hone dega */
+  
+  /* Baki purana code same rakhein */
+  border: 1px solid var(--border-color); 
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  display: flex;       /* Layout fix */
-  flex-direction: column; /* Layout fix */
+  display: flex;       
+  flex-direction: column; 
 }
 
 .session-card:hover {
