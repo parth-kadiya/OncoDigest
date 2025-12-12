@@ -41,10 +41,10 @@
     }
 
     /* Sessions Grid - 3 se 2 columns better rahenge yaha se */
-    .sessions-grid {
+    /* .sessions-grid {
         grid-template-columns: repeat(3, 1fr);
         gap: 20px;
-    }
+    } */
 }
 
 /* --- 3. Tablet Portrait & Small Laptops (769px to 1023px) --- */
@@ -77,9 +77,9 @@
     }
 
     /* Sessions: Switch to 2 Columns */
-    .sessions-grid {
+    /* .sessions-grid {
         grid-template-columns: repeat(2, 1fr);
-    }
+    } */
 
     /* Features: Switch to Vertical Layout (Column) */
     .features-container {
