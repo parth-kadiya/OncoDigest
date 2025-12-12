@@ -1,0 +1,2593 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{{ $settings_result['page_title'] }}</title>
+    @include('Mobile_Detect')
+    @php
+    $detect = new Mobile_Detect;
+    $isMobile = false;
+    if ( $detect->isMobile() ) {
+        $isMobile =true;
+    }
+
+    $halls = DB::select("SELECT * FROM `theater_hall` WHERE type = 'hall' and id not in (select target_hall_id from exhibition_stall)");
+    if(empty($halls)){
+        $halls = array();
+    }
+
+    $current_hall_index = -1;
+    $next_hall_url  = $previous_hall_url = '';
+    if(is_array($exhibition) && count($exhibition) > 0){
+        $new_array = array();
+        foreach($exhibition as $i => $h){
+            $new_array[] = array('id' => $h['exhibition_hall_id'], 'link' => $h['link'], 'slug' => $h['slug']);
+
+            if(isset($hall_details->id) && $hall_details->slug == $h['slug']){
+                $current_hall_index = count($new_array)-1   ;
+            }
+        }
+        if(isset($new_array[$current_hall_index+1])){
+            $next_hall_url = route('hall_detail_slug',[$new_array[$current_hall_index+1]['slug']]);
+        }
+        if(isset($new_array[$current_hall_index-1])){
+            $previous_hall_url = route('hall_detail_slug',[$new_array[$current_hall_index-1]['slug']]);
+        }
+    }
+
+    if(isset($_REQUEST['ref']) && $_REQUEST['ref'] == 'jack'){
+        echo "<pre>";
+        print_r(array($hall_details, array($current_hall_index, $next_hall_url,  $previous_hall_url), $new_array, $exhibition, $halls));
+        exit(0);
+    }
+    if($hall_details->type=="hall"){
+        unset($exhibition);
+    }
+
+    $settings_result_ = \App\Models\SettingsMaster::getSettingsValue(["page_title","favicon"]);
+    $title_ = isset($settings_result_['page_title']) ? $settings_result_['page_title'] : '';
+    $favicon_ = isset($settings_result_['favicon']) ? $settings_result_['favicon'] : '';
+
+    if(!empty($favicon_))
+    $favicon_ = asset('assets/front/images/site_images')."/".$favicon_;
+    else
+    $favicon_ = asset('assets/front/images/site_images/favicon.png');
+      $allowCertificateToDownload = false;
+        $certificate = \App\Certificate::first();
+        if($certificate && $certificate->is_active == 1) {
+            $allowCertificateToDownload = true;
+        }
+
+    @endphp
+    <link rel="icon" href="{{ $favicon_ }}" type="image/x-icon">
+     <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" rel="stylesheet">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css?v=1.1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ asset("assets/front/css/style_popup.min.css")}}">
+    <link rel="stylesheet" href="{{ asset('assets/front/css') . '/magnific-popup.css' }}">
+    <link rel="stylesheet" href="{{ asset('assets/front/css') . '/custom-styles.css' }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: 'Lato', 'Roboto', Verdana, sans-serif, arial;
+        }
+
+        :root{
+            --themeBlinkDotsPrimaryColor:#{{$settings_result["btn_color"]}};
+            --themeBlinkDotsSecondaryColor:#{{$settings_result["btn_color"]}}73;
+            --themeFooterBtnColor:#{{$settings_result["footer_icon_color"]}};
+            --themeFooterBackgroundColor:#{{$settings_result["footer_background_color"]}}DD;
+             --themeFooterDropdownBackgroundColor:#{{$settings_result["footer_background_color"]}}DD;
+        }
+        #bottom-menu ul li i, #bottom-menu ul li a, #bottom-menu ul li span{
+            color: var(--themeFooterBtnColor)!important;
+        }
+        #bottom-menu ul li i, #bottom-menu ul li span{
+            color: var(--themeFooterBtnColor)!important;
+            text-shadow: rgb(0 0 0 / 35%) 0px 5px 15px;
+        }
+        
+
+        .next-hall-btn, .previous-hall-btn {
+          position: fixed;
+          width: 50px;
+          top: 50%;
+          -webkit-transform: translateY(-50%);
+          -ms-transform: translateY(-50%);
+          transform: translateY(-50%);
+          z-index: 9999999;
+          cursor: pointer;
+          background: linear-gradient(to bottom, var(--theme-color-front) 0%, var(--theme-color-front) 50%);
+          opacity: 0.6;
+        }
+        .next-hall-btn svg, .previous-hall-btn svg{width: 50px;}
+        .next-hall-btn{
+            right:0;
+        }
+        .previous-hall-btn{
+            left:0;
+        }
+        div,span,a,li{
+            font-family: 'Lato', 'Roboto', Verdana, sans-serif, arial;
+        }
+        .footer-list-box{line-height: 1.4;}
+        .menu {
+            position: absolute !important;
+        }
+
+
+        .side-menu {
+            position: fixed;
+            top: 2%;
+            left: 0%;
+            border-radius: 0 100px 100px;
+            padding: 8px 10px;
+            -moz-transition: all 0.1s ease-in-out;
+            -webkit-transition: all 0.1s ease-in-out;
+            -o-transition: all 0.1s ease-in-out;
+            transition: all 0.1s ease-in-out;
+            border-color: #ebebeb;
+            background: #5F479D;
+            box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);
+        }
+
+        .back-logout {
+            position: fixed;
+            top: 2%;
+            left: 0%;
+
+        }
+
+        .back-home {
+            position: fixed;
+            top: 10%;
+            left: 0%;
+
+        }
+
+        .back-logout i {
+            color: #fff;
+            font-size: 2rem;
+        }
+
+        .fa {
+            display: inline-block;
+            font: normal normal normal 14px/1 FontAwesome;
+            font-size: inherit;
+            text-rendering: auto;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transform: translate(0, 0);
+        }
+
+
+        .image-object img{
+            object-fit: contain; float: left; width: 100%; height: inherit;
+        }
+        /* .footer{ */
+        /* height:10px !important; */
+        /* padding: 5px;
+        text-align: center;
+        margin-bottom:0px !important;          */
+        /* margin-left:5px !important; */
+        /* } */
+        /* img{
+        height: 729px;
+        width: 1440px;
+        } */
+        .mainDiv {
+            position: relative;
+        }
+
+        .icon_ {
+            border-radius: 50%;
+
+            width: 10px;
+            height: 10px;
+            text-align: center;
+            position: absolute;
+            /* top: 44%; */
+            transform: translateY(-50%);
+            /* left: 3px; */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: anim-glow 2s ease infinite;
+        }
+
+        @keyframes anim-glow {
+            0% {
+                box-shadow: 0 0 var(--animation-color);
+            }
+
+            100% {
+                box-shadow: 0 0 10px 8px transparent;
+                border-width: 2px;
+            }
+        }
+
+        .icon_ i {
+            border-radius: 50%;
+
+            width: 2px;
+            height: 2px;
+            display: inline-block;
+            vertical-align: 6px;
+            background-color: #000;
+        }
+
+        .insideDiv a {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .insideDiv {
+            position: absolute;
+            /* background-color: red; */
+        }
+
+        .lobby-btn.poster {
+            left: 63.5%;
+            top: 32.5%;
+            width: 5.5%;
+            height: 3%;
+        }
+
+        .lobby-btn {
+            top: 50%;
+            left: 50%;
+            position: absolute;
+            z-index: 10;
+        }
+
+        .hotspot_circle{display:inline-block;border-bottom:1px dotted #000}
+        .pulse-box{width:17px;height:17px;margin-top:-10px;margin-left:-10px;position:absolute;top:50%;left:50%;background:#00146B;border-radius:50%;border:2px solid #00146B;-webkit-animation:pulseanimj .8s ease-out;-webkit-animation-iteration-count:infinite}
+        .dot-box{width:17px;height:17px;margin-left:-10px;margin-top:-10px;border-radius:50%;position:absolute;background:#fff;border:2px solid #00146B;top:50%;left:50%;opacity:.8}
+        @-webkit-keyframes pulseanimj {
+            0%{-webkit-transform:scale(1.0,1.0);opacity:.9}
+            100%{-webkit-transform:scale(2.5,2.5);opacity:0}
+        }
+        /*.insideDiv a {*/
+        /*display: block;*/
+        /*width: 100%;*/
+        /*height: 100%;*/
+        /*}*/
+
+        /*.insideDiv {*/
+        /*position: absolute;*/
+        /* border:2px dotted lime; */
+        /*cursor: pointer;*/
+        /*}*/
+
+        #modelBody {
+           /* position: relative;
+            overflow-y: auto;
+            max-height: 800px;
+            height: 500px;
+            padding: 15px;*/
+        }
+
+        @media (max-width:600px) {
+            body {
+                background: var(--theme-color-front);
+            }
+
+            #canvas {
+                display: none;
+            }
+
+            .insideDiv {
+                display: none;
+            }
+            .mainDiv {
+                display: none;
+            }
+
+            #loader {
+                display: none;
+            }
+        }
+
+        a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .me {
+            width: 400px;
+            margin: 90px auto;
+        }
+
+        .me p,
+        .me h1 {
+            letter-spacing: 3px;
+            text-align: center;
+        }
+
+        .me p {
+            font-weight: 200;
+        }
+
+        .me span {
+            font-weight: bold;
+        }
+
+        .social {
+            position: fixed;
+            bottom: 50px;
+        }
+
+        .social ul {
+            padding: 0px;
+            -webkit-transform: translate(-270px, 0);
+            -moz-transform: translate(-270px, 0);
+            -ms-transform: translate(-270px, 0);
+            -o-transform: translate(-270px, 0);
+            transform: translate(-270px, 0);
+        }
+
+        .social ul li {
+            display: block;
+            margin: 5px;
+            background: rgba(0, 0, 0, 0.36);
+            width: 321px;
+            text-align: right;
+            padding: 10px;
+            -webkit-border-radius: 0 30px 30px 0;
+            -moz-border-radius: 0 30px 30px 0;
+            border-radius: 0 30px 30px 0;
+            -webkit-transition: all 1s;
+            -moz-transition: all 1s;
+            -ms-transition: all 1s;
+            -o-transition: all 1s;
+            transition: all 1s;
+        }
+
+        .social ul li:hover {
+            -webkit-transform: translate(110px, 0);
+            -moz-transform: translate(110px, 0);
+            -ms-transform: translate(110px, 0);
+            -o-transform: translate(110px, 0);
+            transform: translate(110px, 0);
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        @if(isset($hall_details->type) && $hall_details->type=="exhibition") .social ul li:hover {
+            -webkit-transform: translate(5px, 0);
+            -moz-transform: translate(5px, 0);
+            -ms-transform: translate(5px, 0);
+            -o-transform: translate(5px, 0);
+            transform: translate(5px, 0);
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        @endif .social ul li:hover a {
+            color: var(--theme-color-front);
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .social ul li:hover i {
+            color: #fff;
+            background: rgba(0, 0, 0, 0.36);
+            -webkit-transform: rotate(360deg);
+            -moz-transform: rotate(360deg);
+            -ms-transform: rotate(360deg);
+            -o-transform: rotate(360deg);
+            transform: rotate(360deg);
+            -webkit-transition: all 1s;
+            -moz-transition: all 1s;
+            -ms-transition: all 1s;
+            -o-transition: all 1s;
+            transition: all 1s;
+        }
+
+        .social ul li i {
+            margin-left: 10px;
+            color: var(--theme-color-front);
+            background: #fff;
+            padding: 10px;
+            -webkit-border-radius: 50%;
+            -moz-border-radius: 50%;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 20px;
+            background: #ffffff;
+            -webkit-transform: rotate(0deg);
+            -moz-transform: rotate(0deg);
+            -ms-transform: rotate(0deg);
+            -o-transform: rotate(0deg);
+            transform: rotate(0deg);
+        }
+
+        #display-loader {
+            height: 100% !important;
+            width: 100% !important;
+            position: absolute;
+        }
+
+        #loader {
+            border: 12px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 12px solid #444444;
+            width: 70px;
+            height: 70px;
+            animation: spin 1s linear infinite;
+            background: var(--theme_front_color)
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .center {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+            background: var(--theme-color-front)
+        }
+
+        .swal2-icon {
+            margin: 0px !important;
+        }
+
+        #comment_send {
+            background: var(--theme-color-front);
+            color: var(--btn-color);
+        }
+
+        .hidden,
+        .hide {
+            display: none;
+        }
+
+    .modal-content {
+            -webkit-box-shadow: 0 5px 15px rgba(0, 0, 0, 0) !important;
+            -moz-box-shadow: 0 5px 15px rgba(0, 0, 0, 0) !important;
+            -o-box-shadow: 0 5px 15px rgba(0, 0, 0, 0) !important;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0) !important;
+        }
+        .desktop-pdf {
+            display: none;
+        }
+
+        .mobile-pdf {
+            display: block;
+        }
+
+        /*
+        .sticky-link {
+            color: var(--btn-color);
+        }
+
+        .sticky-link:hover {
+            color: var(--btn-color);
+            text-decoration: none;
+        } */
+
+        @media only screen and (min-width : 1025px) {
+            .mobile-pdf {
+                display: none;
+            }
+
+            .desktop-pdf {
+                display: block;
+            }
+        }
+
+        #bubblebackground-wrap{bottom:0;left:0;position:fixed;right:0;top:0;z-index:99;pointer-events:none} @-webkit-keyframes animateBubble { 0%{margin-top:1000px} 100%{margin-top:-100%} } @-moz-keyframes animateBubble { 0%{margin-top:1000px} 100%{margin-top:-100%} } @keyframes animateBubble { 0%{margin-top:1000px} 100%{margin-top:-100%} } @-webkit-keyframes sideWays { 0%{margin-left:0} 100%{margin-left:50px} } @-moz-keyframes sideWays { 0%{margin-left:0} 100%{margin-left:50px} } @keyframes sideWays { 0%{margin-left:0} 100%{margin-left:50px} } .x1{-webkit-animation:animateBubble 20s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 20s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 20s linear infinite,sideWays 2s ease-in-out infinite alternate;left:39%;top:5%;-webkit-transform:scale(0.6);-moz-transform:scale(0.6);transform:scale(0.6)} .x2{-webkit-animation:animateBubble 15s linear infinite,sideWays 4s ease-in-out infinite alternate;-moz-animation:animateBubble 15s linear infinite,sideWays 4s ease-in-out infinite alternate;animation:animateBubble 15s linear infinite,sideWays 4s ease-in-out infinite alternate;left:33%;top:80%;-webkit-transform:scale(0.4);-moz-transform:scale(0.4);transform:scale(0.4)} .x3{-webkit-animation:animateBubble 10s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 10s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 10s linear infinite,sideWays 2s ease-in-out infinite alternate;left:27%;top:40%;-webkit-transform:scale(0.7);-moz-transform:scale(0.7);transform:scale(0.7)} .x4{-webkit-animation:animateBubble 20s linear infinite,sideWays 3s ease-in-out infinite alternate;-moz-animation:animateBubble 20s linear infinite,sideWays 3s ease-in-out infinite alternate;animation:animateBubble 20s linear infinite,sideWays 3s ease-in-out infinite alternate;left:20%;top:0;-webkit-transform:scale(0.3);-moz-transform:scale(0.3);transform:scale(0.3)} .x5{-webkit-animation:animateBubble 15s linear infinite,sideWays 4s ease-in-out infinite alternate;-moz-animation:animateBubble 15s linear infinite,sideWays 4s ease-in-out infinite alternate;animation:animateBubble 15s linear infinite,sideWays 4s ease-in-out infinite alternate;left:30%;top:50%;-webkit-transform:scale(0.5);-moz-transform:scale(0.5);transform:scale(0.5)} .x6{-webkit-animation:animateBubble 10s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 10s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 10s linear infinite,sideWays 2s ease-in-out infinite alternate;left:50%;top:0;-webkit-transform:scale(0.8);-moz-transform:scale(0.8);transform:scale(0.8)} .x7{-webkit-animation:animateBubble 12s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 12s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 12s linear infinite,sideWays 2s ease-in-out infinite alternate;left:65%;top:70%;-webkit-transform:scale(0.4);-moz-transform:scale(0.4);transform:scale(0.4)} .x8{-webkit-animation:animateBubble 17s linear infinite,sideWays 3s ease-in-out infinite alternate;-moz-animation:animateBubble 17s linear infinite,sideWays 3s ease-in-out infinite alternate;animation:animateBubble 17s linear infinite,sideWays 3s ease-in-out infinite alternate;left:80%;top:10%;-webkit-transform:scale(0.3);-moz-transform:scale(0.3);transform:scale(0.3)} .x9{-webkit-animation:animateBubble 14s linear infinite,sideWays 4s ease-in-out infinite alternate;-moz-animation:animateBubble 14s linear infinite,sideWays 4s ease-in-out infinite alternate;animation:animateBubble 14s linear infinite,sideWays 4s ease-in-out infinite alternate;left:43%;top:50%;-webkit-transform:scale(0.6);-moz-transform:scale(0.6);transform:scale(0.6)} .x10{-webkit-animation:animateBubble 18s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 18s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 18s linear infinite,sideWays 2s ease-in-out infinite alternate;left:80%;top:80%;-webkit-transform:scale(0.3);-moz-transform:scale(0.3);transform:scale(0.3)} .x11{-webkit-animation:animateBubble 16s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 16s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 16s linear infinite,sideWays 2s ease-in-out infinite alternate;left:18%;top:15%;-webkit-transform:scale(0.6);-moz-transform:scale(0.6);transform:scale(0.6)} .x12{-webkit-animation:animateBubble 12s linear infinite,sideWays 4s ease-in-out infinite alternate;-moz-animation:animateBubble 12s linear infinite,sideWays 4s ease-in-out infinite alternate;animation:animateBubble 12s linear infinite,sideWays 4s ease-in-out infinite alternate;left:35%;top:40%;-webkit-transform:scale(0.4);-moz-transform:scale(0.4);transform:scale(0.4)} .x13{-webkit-animation:animateBubble 9s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 9s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 9s linear infinite,sideWays 2s ease-in-out infinite alternate;left:20%;top:40%;-webkit-transform:scale(0.7);-moz-transform:scale(0.7);transform:scale(0.7)} .x14{-webkit-animation:animateBubble 6s linear infinite,sideWays 3s ease-in-out infinite alternate;-moz-animation:animateBubble 6s linear infinite,sideWays 3s ease-in-out infinite alternate;animation:animateBubble 6s linear infinite,sideWays 3s ease-in-out infinite alternate;left:38%;top:0;-webkit-transform:scale(0.3);-moz-transform:scale(0.3);transform:scale(0.3)} .x15{-webkit-animation:animateBubble 13s linear infinite,sideWays 4s ease-in-out infinite alternate;-moz-animation:animateBubble 13s linear infinite,sideWays 4s ease-in-out infinite alternate;animation:animateBubble 13s linear infinite,sideWays 4s ease-in-out infinite alternate;left:48%;top:50%;-webkit-transform:scale(0.5);-moz-transform:scale(0.5);transform:scale(0.5)} .x16{-webkit-animation:animateBubble 7s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 7s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 7s linear infinite,sideWays 2s ease-in-out infinite alternate;left:30%;top:0;-webkit-transform:scale(0.8);-moz-transform:scale(0.8);transform:scale(0.8)} .x17{-webkit-animation:animateBubble 17s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 17s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 17s linear infinite,sideWays 2s ease-in-out infinite alternate;left:40%;top:70%;-webkit-transform:scale(0.4);-moz-transform:scale(0.4);transform:scale(0.4)} .x18{-webkit-animation:animateBubble 14s linear infinite,sideWays 3s ease-in-out infinite alternate;-moz-animation:animateBubble 14s linear infinite,sideWays 3s ease-in-out infinite alternate;animation:animateBubble 14s linear infinite,sideWays 3s ease-in-out infinite alternate;left:20%;top:10%;-webkit-transform:scale(0.3);-moz-transform:scale(0.3);transform:scale(0.3)} .x19{-webkit-animation:animateBubble 8s linear infinite,sideWays 4s ease-in-out infinite alternate;-moz-animation:animateBubble 8s linear infinite,sideWays 4s ease-in-out infinite alternate;animation:animateBubble 8s linear infinite,sideWays 4s ease-in-out infinite alternate;left:55%;top:50%;-webkit-transform:scale(0.6);-moz-transform:scale(0.6);transform:scale(0.6)} .x20{-webkit-animation:animateBubble 5s linear infinite,sideWays 2s ease-in-out infinite alternate;-moz-animation:animateBubble 5s linear infinite,sideWays 2s ease-in-out infinite alternate;animation:animateBubble 5s linear infinite,sideWays 2s ease-in-out infinite alternate;left:60%;top:80%;-webkit-transform:scale(0.3);-moz-transform:scale(0.3);transform:scale(0.3)} .hearts{-webkit-border-radius:50%;-moz-border-radius:50%;border-radius:50%;height:150px;position:absolute;width:150px} .hearts img{width:100%} .hearts:after{content:"";height:180px;left:10px;position:absolute;width:180px}
+
+       /* @media (min-width: 576px) {
+            .modal-dialog {
+                max-width: 50% !important;
+            }
+        }
+        }*/
+/*        .modal-content {
+    position: relative !important;
+    display: -ms-flexbox !important;
+    display: flex !important;
+    -ms-flex-direction: column !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    pointer-events: auto !important;
+    background-color: #fff !important;
+    background-clip: padding-box !important;
+    border: 1px solid rgba(0,0,0,.2) !important;
+    border-radius: .3rem !important;
+    outline: 0 !important;
+}*/
+    </style>
+    <style>
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+}
+
+.special-hall-button button:hover,
+.special-hall-button-sumo button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(0,0,0,0.5);
+}
+</style>
+
+    <link rel="stylesheet" href="{{ asset('assets/front/css/ct_dynamic.css') }}">
+</head>
+
+<body style="/*background: var(--theme-color-front)*/">
+    @include('front.rotate_device')
+    
+    <div style="position: fixed;-webkit-transform: translateY(-50%); -ms-transform: translateY(-50%); transform: translateY(-50%); z-index: 9999;top:10%;display: none;">
+        <button class=" btn btn-primary heartButton">Play heart</button>
+            <button class=" btn btn-primary likebutton">Play Like</button>
+            <button class=" btn btn-primary audit-btn hot" onclick="playAudio2(this)">Hot</button>
+            <button  class=" btn btn-primary audit-btn clp" onclick="playAudio1(this)">Clap</button>
+    </div>
+    <div id="bubblebackground-wrap" class="like_hearts" style="display: none">
+                    <div class="hearts x1" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x2" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x3" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x4" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x5" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x6" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x7" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x8" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x9" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x10" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x11" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x12" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x13" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x14" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x15" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x16" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x17" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x18" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x19" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+                    <div class="hearts x20" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/heart-icon.sv'}}g" alt=""></div>
+            </div>
+        <div id="bubblebackground-wrap" class="like_bubble" style="display: none;">
+                    <div class="hearts x1" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x2" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x3" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x4" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x5" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x6" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x7" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x8" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x9" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x10" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x11" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x12" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x13" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x14" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x15" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x16" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x17" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x18" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x19" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+                    <div class="hearts x20" style="text-align:center;line-height: 250px"><img src="{{ asset('assets/front/images/site_images').'/like-icon.svg'}}" alt=""></div>
+            </div>
+
+            <audio id="clap">
+        <source src="{{ asset('assets/front/images/site_images').'/audio.ogg'}}" type="audio/ogg">
+        <source src="{{ asset('assets/front/images/site_images').'/audio.mp3'}}" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    <audio id="hoot">
+        <source src="{{ asset('assets/front/images/site_images').'/hooting.ogg'}}" type="audio/ogg">
+        <source src="{{ asset('assets/front/images/site_images').'/hooting.mp3'}}" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    
+    @if(!empty($previous_hall_url))
+    <div class="previous-hall-btn" title="Previous Hall">
+        <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="96.000000pt" height="96.000000pt" viewBox="0 0 96.000000 96.000000" preserveAspectRatio="xMidYMid meet"> <g transform="translate(0.000000,96.000000) scale(0.100000,-0.100000)" fill="#ffffff" stroke="none"> <path d="M163 828 c-41 -20 -44 -48 -41 -366 3 -274 5 -303 21 -319 16 -17 44 -18 337 -18 293 0 321 1 337 18 16 16 18 45 21 319 3 322 0 347 -44 367 -33 15 -600 14 -631 -1z m635 -30 c17 -17 17 -529 0 -546 -17 -17 -619 -17 -636 0 -17 17 -17 529 0 546 17 17 619 17 636 0z m12 -603 c0 -29 -19 -45 -52 -45 -18 0 -28 5 -28 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -10 -10 -15 -28 -15 -33 0 -52 16 -52 45 0 20 4 20 330 20 326 0 330 0 330 -20z"/> <path d="M392 589 c-84 -54 -83 -76 6 -131 74 -47 92 -45 92 12 l0 40 90 0 c73 0 90 3 90 15 0 12 -17 15 -89 15 l-90 0 -3 42 c-2 29 -8 44 -18 45 -8 2 -43 -15 -78 -38z m78 -64 c0 -41 -2 -75 -5 -75 -15 0 -105 64 -105 75 0 12 84 73 103 74 4 1 7 -33 7 -74z"/> <path d="M270 525 c0 -69 3 -85 15 -85 12 0 15 16 15 85 0 69 -3 85 -15 85 -12 0 -15 -16 -15 -85z"/> </g> </svg>
+    </div>
+    @endif
+    @if(!empty($next_hall_url))
+    <div class="next-hall-btn" title="Next Hall">
+        <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="96.000000pt" height="96.000000pt" viewBox="0 0 96.000000 96.000000" preserveAspectRatio="xMidYMid meet"> <g transform="translate(0.000000,96.000000) scale(0.100000,-0.100000)" fill="#ffffff" stroke="none"> <path d="M163 828 c-41 -20 -44 -48 -41 -366 3 -274 5 -303 21 -319 16 -17 44 -18 337 -18 293 0 321 1 337 18 16 16 18 45 21 319 3 322 0 347 -44 367 -33 15 -600 14 -631 -1z m635 -30 c17 -17 17 -529 0 -546 -17 -17 -619 -17 -636 0 -17 17 -17 529 0 546 17 17 619 17 636 0z m12 -603 c0 -29 -19 -45 -52 -45 -18 0 -28 5 -28 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -8 -9 -15 -20 -15 -11 0 -20 7 -20 15 0 8 -4 15 -10 15 -5 0 -10 -7 -10 -15 0 -10 -10 -15 -28 -15 -33 0 -52 16 -52 45 0 20 4 20 330 20 326 0 330 0 330 -20z"/> <path d="M477 623 c-4 -3 -7 -24 -7 -45 l0 -38 -90 0 c-73 0 -90 -3 -90 -15 0 -12 17 -15 90 -15 l90 0 0 -40 c0 -57 18 -59 92 -12 89 56 90 77 6 131 -63 41 -79 47 -91 34z m75 -54 c26 -17 48 -37 48 -44 0 -12 -87 -75 -103 -75 -4 0 -7 34 -7 75 0 41 3 75 7 75 3 0 28 -14 55 -31z"/> <path d="M660 525 c0 -69 3 -85 15 -85 12 0 15 16 15 85 0 69 -3 85 -15 85 -12 0 -15 -16 -15 -85z"/> </g> </svg>
+    </div>
+    @endif
+
+    <div class="preloader">
+        <div class="loader">
+            <div class="loader--dot"></div>
+            <div class="loader--dot"></div>
+            <div class="loader--dot"></div>
+            <div class="loader--dot"></div>
+            <div class="loader--dot"></div>
+            <div class="loader--dot"></div>
+            <div class="loader--text"></div>
+        </div>
+    </div>
+    <!-- Note:This menu_position variable is Global shared variable from appServiceProvider -->
+        @if(isset($menu_position->sValue) && $menu_position->sValue=="left")
+    <div class="mainDiv">
+        <nav class="social">
+            <ul>
+                <li>
+                    <a href="{{ route('entry_dashboard') }}">
+    Home <i class="fa fa-home" style="display: inherit;"></i></a>
+    </li>
+    <li><a href="#" class="chat1" onclick="chatBoxNew()">
+            Chat <i class="fa fa-comment" style="display: inherit;"></i></a></li>
+    @if($settings_result['display_poll']==1)
+    <li>
+        <a href="#" class="poll1" onclick="pollBox()">
+            Poll <i class="fa fa-list" style="display: inherit;"></i></a>
+    </li>
+    @endif
+    @if($allowCertificateToDownload == true)
+                    <li>
+                        <a href="javascript:;" id="download_certificate" class="sticky-link">Certificate <i
+                                class="fa fa-certificate" style="display: inherit;"></i></a>
+                    </li>
+                @endif
+    @if(!empty($back))
+    <li>
+        <a href="{{ $back }}">
+            Back <i class="fa fa-undo" style="display: inherit;"></i></a>
+    </li>
+    @endif
+    <li>
+        <a href="{{ route('logout') }}" class="session-logout">
+            Logout <i class="fa fa-power-off" style="display: inherit;"></i></a>
+    </li>
+    </ul>
+    </nav>
+    </div>
+    @endif
+    @php
+    $value=json_decode($hall_details->videoplayer_coordinate,true);
+    $style = "";
+    if(!empty($value) && is_array($value)){
+    $style = "top : ".$value['startY']."px; left :".$value['startX']."px; width :"
+    .$value['width']."px; height : ".$value['height']."px;";
+    $style = "";
+
+    }
+    @endphp
+    @if($hall_details->type=="hall")
+    @if(!empty($hall_details->video_url))
+    <div class='insideDiv d-none' style="{{  $style }}" data-x="{{ $value['startX'] }}" data-y="{{ $value['startY'] }}"
+        data-w="{{ $value['width'] }}" data-h="{{ $value['height'] }}">
+        <a class="openPopup" data-html="{{$hall_details->video_url}}" data-toggle="modal" id="openPopup">{!!
+            $hall_details->video_url!!}</a>
+    </div>
+    @endif
+
+    @for($i = 1; $i <= 2; $i++) <?php $pdf = "pdf".$i ?> <?php $pdf_coordinate = "pdf_coordinate".$i ?>
+        @if(!empty($hall_details->$pdf))
+        @php
+        $value=json_decode($hall_details->$pdf_coordinate,true);
+        $style = "";
+        if(!empty($value) && is_array($value)){
+        $style = "top : ".$value['startY']."px; left :".$value['startX']."px; width :"
+        .$value['width']."px; height : ".$value['height']."px;";
+        $style = "";
+        }
+        @endphp
+
+        <div class='insideDiv d-none' style="{{  $style }}" data-x="{{ $value['startX'] }}"
+            data-y="{{ $value['startY'] }}" data-w="{{ $value['width'] }}" data-h="{{ $value['height'] }}">
+            <a href="{{ url('/') }}/public/assets/front/images/site_images/{{$hall_details->$pdf}}" class="showpdf" data-number="{{$i}}" data-type="pdf"
+                data-value="{{$hall_details->$pdf}}" data-toggle="modal" id="openPopup">
+                    <div class="hotspot_circle"> 
+                        <div class="pulse-box"></div> 
+                        <div class="dot-box"></div> 
+                    </div>
+                </a>
+        </div>
+        @endif
+        @endfor
+
+        @if(!empty($hall_details->social_links_coordinate) && !empty($hall_details->social_links))
+            @php
+            $value=json_decode($hall_details->social_links_coordinate,true);
+            $style = "";
+            if(!empty($value) && is_array($value)){
+            $style = "top : ".$value['startY']."px; left :".$value['startX']."px; width :"
+            .$value['width']."px; height : ".$value['height']."px;";
+            $style = "";
+            }
+            @endphp
+
+            <div class='insideDiv' style="{{ $style}}" data-x="{{ $value['startX'] }}" data-y="{{ $value['startY'] }}"
+            data-w="{{ $value['width'] }}" data-h="{{ $value['height'] }}" data-type="social_links">
+
+                <a onclick='openSocialLinksModal()' href="#" class="object_link" data-type="social_links">
+                    <div class="hotspot_circle"> 
+                        <div class="pulse-box"></div> 
+                        <div class="dot-box"></div> 
+                    </div>
+                </a>
+            </div>
+            
+        @endif
+
+        @for($i = 1; $i <= 2; $i++) <?php $image_object = "image_object_".$i ?> <?php $image_object_coordinate = "image_object_".$i."_coordinate"; ?>
+            @if(!empty($hall_details->$image_object))
+            @php
+            $hall_details->$image_object = json_decode($hall_details->$image_object, true);
+            $value=json_decode($hall_details->$image_object_coordinate,true);
+            $style = "";
+            if(!empty($value) && is_array($value)){
+            $style = "top : ".$value['startY']."px; left :".$value['startX']."px; width :"
+            .$value['width']."px; height : ".$value['height']."px;";
+            $style = "";
+            }
+            @endphp
+
+            
+            <div class='insideDiv image-object' style="{{ $style}}" data-x="{{ $value['startX'] }}" data-y="{{ $value['startY'] }}" data-w="{{ $value['width'] }}" data-h="{{ $value['height'] }}" data-image-w="{{ $hall_details->$image_object['width'] }}"
+            data-image-h="{{ $hall_details->$image_object['height'] }}" data-type="image_object">
+
+                <img src="{{ \App\Models\Functions::geturlObject() . '/'. $hall_details->$image_object['path'] }}" alt='Image'>
+            </div>
+            @endif
+        @endfor
+
+
+        @for($i = 1; $i <= 5; $i++) <?php $redirect = "redirect".$i ?>
+            <?php $redirect_coordinate = "redirect_coordinate".$i ?> @if(!empty($hall_details->$redirect))
+            @php
+            $value=json_decode($hall_details->$redirect_coordinate,true);
+            $style = "";
+            if(!empty($value) && is_array($value)){
+            $style = "top : ".$value['startY']."px; left :".$value['startX']."px; width :"
+            .$value['width']."px; height : ".$value['height']."px;";
+            $style = "";
+
+            }
+            @endphp
+            <div class='insideDiv d-none' style="{{  $style }}" data-x="{{ $value['startX'] }}"
+                data-y="{{ $value['startY'] }}" data-w="{{ $value['width'] }}" data-h="{{ $value['height'] }}">
+                <a href="javascript:;" data-redirect="{{$hall_details->$redirect}}" data-type="redirect"
+                    data-number="{{$i}}" class="redirect_hall">
+                        <div class="hotspot_circle"> 
+                            <div class="pulse-box"></div> 
+                            <div class="dot-box"></div> 
+                        </div>
+                    </a>
+            </div>
+            @endif
+            @endfor
+            @elseif($hall_details->type=="exhibition")
+
+            {{--  @php
+            $style = "top : ".$exhibition['startY']."px; left :".$exhibition['startX']."px; width :".$exhibition['width']."px; height :
+            ".$exhibition['height']."px;";
+            $style = "";
+            @endphp --}}
+            @foreach($exhibition as $item)
+
+            <div class='insideDiv hall-element d-none' style="{{  $style }}" data-x="{{ $item['startX'] }}"
+                data-y="{{ $item['startY']}}" data-w="{{ $item['width'] }}" data-h="{{ $item['height'] }}"
+                data-image-w="{{ $item['image_width'] }}" data-image-h="{{ $item['image_height'] }}">
+                <a href="{{ $item['link'] }}">
+                    <div class="hotspot_circle"> 
+                        <div class="pulse-box"></div> 
+                        <div class="dot-box"></div> 
+                    </div>
+                </a>
+
+            </div>
+            @endforeach
+            @endif
+                @if($hall_details->slug == 'swich-200-tablets' && $hall_details->type == 'hall')
+                    <div class="special-hall-button" style="position: fixed; bottom: 20%; right: 20px; z-index: 9999;">
+                        <button class="btn btn-primary" id="switchTabletBtn" style="
+                            background: linear-gradient(to bottom, var(--theme-color-front) 0%, var(--theme-color-front) 50%);
+                            color: white;
+                            padding: 15px 25px;
+                            border-radius: 50px;
+                            font-size: 16px;
+                            font-weight: bold;
+                            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                            border: none;
+                            cursor: pointer;
+                            animation: pulse 2s infinite;
+                        ">
+                            <i class="fa fa-tablet" style="margin-right: 8px;"></i>
+                            Swich 200 Info
+                        </button>
+                    </div>
+                @endif
+
+                {{-- Button for Sumo-3 --}}
+                @if($hall_details->slug == 'sumo-3' && $hall_details->type == 'hall')
+                    <div class="special-hall-button-sumo" style="position: fixed; bottom: 20%; right: 20px; z-index: 9999;">
+                        <button class="btn btn-success" id="sumoBtn" style="
+                            background: linear-gradient(to bottom, #28a745 0%, #218838 50%);
+                            color: white;
+                            padding: 15px 25px;
+                            border-radius: 50px;
+                            font-size: 16px;
+                            font-weight: bold;
+                            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                            border: none;
+                            cursor: pointer;
+                            animation: pulse 2s infinite;
+                        ">
+                            <i class="fa fa-info-circle" style="margin-right: 8px;"></i>
+                            Sumo-3 Details
+                        </button>
+                    </div>
+                @endif
+
+            @php
+            $back_image = \App\Models\Functions::getSiteUrl().$hall_details->hall_image;
+            $is_gif = strpos($back_image,".gif");
+            @endphp
+
+
+            <img src="{{ $back_image}}" id="backImage" alt="image" width="100%" height="100%">
+
+
+            </div>
+            {{-- <div class="text-center mt-3">
+        <button class="btn btn-info">Q&A</button>
+        <button class="btn btn-primary">Poll</button>
+        <a  href="{{ route('logout') }}" class="btn btn-danger">Logout</button>
+            </div> --}}
+
+            {{-- <div class="footer" style="margin-bottom:0px !important;">
+
+        <a href="{{ route('dashboard') }}" class="btn btn-success">
+            Home
+            </a>
+            <a href="#" class="btn btn-primary openPopup" data-toggle="modal" id="openPopup">
+                Poll
+            </a>
+            <a href="#" class="btn btn-primary openPopup" data-toggle="modal" id="openPopup">
+                Q&A
+            </a>
+            <a href="{{ route('logout') }}" class="btn btn-danger">
+                Log Out
+            </a>
+            </div> --}}
+
+            <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                aria-hidden="true" data-backdrop="false">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+
+                        <div class="modal-body">
+                            <button type="button" data-backdrop="false" class="close" data-dismiss="modal"
+                                aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <span id="modelBody">
+
+                            </span>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        @if(isset($hall_details->social_links) && is_array($hall_details->social_links) && count($hall_details->social_links) > 0)
+            <style type="text/css">
+                #socialModal .img-thumbnail {
+                    border-radius: 33px;
+                    width: 61px;
+                    height: 61px
+                }
+
+                #socialModal .fa:before {
+                    position: relative;
+                    top: 13px;
+                    font-size: 1.4em;
+                }
+
+                #socialModal .smd {
+                    /*width: 100px;*/
+                    text-align: center;
+                }
+                #socialModal .modal {
+                    background-image: linear-gradient(rgb(35, 79, 71) 0%, rgb(36, 121, 106) 100.2%)
+                }
+
+                #socialModal .modal-title {
+                    font-weight: 900
+                }
+
+                #socialModal .modal-content {
+                    border-radius: 13px
+                }
+
+                #socialModal .modal-body {
+                    color: #3b3b3b
+                }
+                #socialModal a{padding: 5px;}
+                #socialModal a:hover{
+                    text-decoration: none;
+                }
+            </style>
+            <div class="modal fade" id="socialModal" tabindex="-1" role="dialog" aria-labelledby="socialModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content col-12"   >
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ (isset($hall_details->social_links['social_popup_title']) && !empty($hall_details->social_links['social_popup_title'])) ? $hall_details->social_links['social_popup_title'] : 'Social Share'}}</h5> <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>
+                        </div>
+                        <div class="modal-body mt-3 mb-3">
+                            <span id="modelBody">
+                                <div class="icon-container1 d-flex justify-content-center">
+                                    @foreach($hall_details->social_links as $s_Key => $s_value)
+                                        @if($s_Key == 'facebook' && !empty($s_value))
+                                        <a class="btn btn-link" href="{{ $s_value }}" target="_blank">
+                                            <div class="smd"> <i class="img-thumbnail fa fa-facebook fa-2x" style="color: #3b5999; background-color: #3b599938;"></i>
+                                            </div>
+                                        </a>
+                                        @endif
+                                        @if($s_Key == 'twitter' && !empty($s_value))
+                                        <a class="btn btn-link" href="{{ $s_value }}" target="_blank">
+                                            <div class="smd"> <i class=" img-thumbnail fa fa-twitter fa-2x" style="color: #55acee; background-color: #55acee2e;"></i>
+                                            </div>
+                                        </a>
+                                        @endif
+                                        @if($s_Key == 'instagram' && !empty($s_value))
+                                        <a class="btn btn-link" href="{{ $s_value }}" target="_blank">
+                                            <div class="smd"> <i class=" img-thumbnail fa fa-instagram fa-2x" style="color: #e4405f; background-color: #e4405f4a;"></i>
+                                            </div>
+                                        </a>
+                                        @endif
+                                        @if($s_Key == 'linked_in' && !empty($s_value))
+                                        <a class="btn btn-link" href="{{ $s_value }}" target="_blank">
+                                            <div class="smd"> <i class=" img-thumbnail fa fa-linkedin fa-2x" style="color: #2867B2; background-color: #2867b242;"></i>
+                                            </div>
+                                        </a>
+                                        @endif
+                                        @if($s_Key == 'youtube' && !empty($s_value))
+                                        <a class="btn btn-link" href="{{ $s_value }}" target="_blank">
+                                            <div class="smd"> <i class=" img-thumbnail fa fa-youtube fa-2x" style="color: #cd201f; background-color: #cd201f30;"></i>
+                                            </div>
+                                        </a>
+                                        @endif
+                                        @if($s_Key == 'website' && !empty($s_value))
+                                        <a class="btn btn-link" href="{{ $s_value }}" target="_blank">
+                                            <div class="smd"> <i class="img-thumbnail fa fa-globe fa-2x " style="color: #738ADB;background-color: #e9ecef;"></i>
+                                            </div>
+                                        </a>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </span>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+        <!-- Note:This menu_position variable is Global shared variable from appServiceProvider -->
+        @if(isset($menu_position->sValue) && $menu_position->sValue=="buttom")
+            @include('front.footer')
+        @endif
+
+            {{--<div style="background:var(--theme-color-front);position:fixed;bottom:0%;width:100%;padding:10px;">
+                <div style="display:flex;justify-content:space-around;align-items:center;list-style:none">
+                    <li>
+                        <a href="{{ route('entry_dashboard') }}" class="sticky-link">
+            Home <i class="fa fa-home" style="display: inherit;"></i></a>
+            </li>
+            <li><a href="#" class="chat1 sticky-link" onclick="chatBoxNew()">
+                    Chat <i class="fa fa-comment" style="display: inherit;"></i></a></li>
+            @if($settings_result['display_poll']==1)
+            <li>
+                <a href="#" class="poll1 sticky-link" onclick="pollBox()">
+                    Poll <i class="fa fa-list" style="display: inherit;"></i></a>
+            </li>
+            @endif
+            @if(!empty($back))
+            <li>
+                <a href="{{ $back }}" class="sticky-link">
+                    Back <i class="fa fa-undo" style="display: inherit;"></i></a>
+            </li>
+            @endif
+            <li>
+                <a href="{{ route('logout') }}" class="session-logout sticky-link">
+                    Logout <i class="fa fa-power-off" style="display: inherit;"></i></a>
+            </li>
+            </div>
+            </div>--}}
+
+              <div class="footer">
+        <div class="lside">
+            <div class="pollBox" id="pollBox" style="display:none;">
+                <div class="card m-card" style="width:fit-content !important;max-width:500px !important">
+                    <div class="card-body">
+                        <div class="poll-area">
+                            <div class="d-flex justify-content-end cursor-pointer mb-2" onclick="pollClose()">
+                                <i class="fa fa-times" aria-hidden="true"></i>
+                            </div>
+                            <div id="que"
+                                style="width:100% !important;padding:10px !important;border-radius:5px !important;background:var(--theme-color-front);color:var(--btn-color);overflow-y:scroll;max-height:50px">
+                                <div class="force-overflow"></div>
+                                <span id="poll-quiz-title">Poll & Quiz Question Will Display Here <button>
+                                        element.</span>
+                            </div>
+                            <div class="scrollArea mCustomScrollbar scrollbar scrollbar_1" id="style-1"
+                                style="width:400px !important">
+                                <div class="force-overflow"></div>
+                                <div id="answerList"></div>
+                                <ul class="pollbox" style="overflow-wrap:anywhere !important">
+
+                                    {{--<li>
+                                        <div class="block correct-answer">
+                                            <span class="mr-2">A.</span>
+                                            <span>1</span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <div class="block">
+                                            <span class="mr-2">A.</span>
+                                            <span>1</span>
+                                        </div>
+                                    </li> --}}
+                                </ul>
+                            </div>
+                            {{-- <nav aria-label="Page navigation example" id="pagination" class="mt-3">
+                                --}}
+
+                        </div>
+                    </div>
+                    <nav aria-label="Page navigation example" id="pagination" class="mt-3">
+                    </nav>
+                </div>
+            </div>
+
+        </div>
+        <div class="rside">
+            <div class="chatBox" id="chatBox" style="display:none;">
+                <div class="card m-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-end mb-2 cursor-pointer" onclick="chatClose()">
+                            <i class="fa fa-times" aria-hidden="true"></i>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <div class="title m-0 p-0">Welcome {{\Auth::user()->name}}</div>
+                            {{-- <div>
+                                <button class="btn btn-primary btn-rounded btn-small" onclick="logout()"
+                                    type="submit">Log
+                                    Out</button>
+                            </div> --}}
+                        </div>
+                        <div>
+                            <div class="mt-2 mb-2">
+
+                                @if($should_display_speakers_option)
+                                <input type="text" id="speaker" class="form-control" readonly=""
+                                    placeholder="- Select Speaker -"
+                                    style="height: 40px; margin-bottom: 10px;background: #f9f9f9">
+                                {{-- <select class="form-control form-control-in" name="state">
+                                        <option value="Dr. Sanjay Sharma">Dr. Sanjay Sharma</option>
+                                        <option value="Dr. Gaurav Agrawal">Dr. Gaurav Agrawal</option>
+                                        <option value="Dr. Manish Malhotra">Dr. Manish Malhotra</option>
+                                        <option value="Dr. Zenil Sundaram">Dr. Zenil Sundaram</option>
+                                    </select> --}}
+                                @endif
+                            </div>
+                            <div class="mt-2 mb-2 comment">
+                                <textarea name="comment" id="comment" cols="30"
+                                    class="form-control form-control-in _textarea01 " rows="1"></textarea>
+                                <br>
+                                <span class="errors hide"></span>
+                                <span class="success hide"></span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center"
+                                style="float:right !important;">
+                                <!--  <div class="text-success title-sm">We'll never share your email with anyone
+                                    else.</div> -->
+                                <button class="btn btn-primary
+                                    btn-rounded btn-small
+                                    send-btn" type="submit" id="comment_send">
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@include('front.chat_code')
+</body>
+
+</html>
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js"
+    integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous">
+</script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"
+    integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous">
+</script>
+<script src='{{ asset("assets/front/js/common_popup.min.js") }}'></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
+<script src="{{asset('assets/front/js/bootstrap.min.js')}}"></script>
+<script type="text/javascript" src="{{asset('assets/front/js/script.js')}}"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous">
+</script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.js"></script>
+<script src="{{ asset('assets/front/js') . '/mag-popup.js' }}"></script>
+<script>
+    var color_btn = "{{ $settings_result['btn_color'] }}";
+var theme_front_color = "{{ $settings_result['theme_front_color'] }}";
+var img = document.getElementById("backImage");
+var is_gif = {{ $is_gif ? 1 : 0 }};
+// var canvas = document.getElementById('canvas');
+// var ctx = canvas.getContext('2d');
+var title_ = "{{isset($title_)?$title_:""}}";
+var display_poll = "{{$settings_result['display_poll']}}";
+var quiz_url = '';
+var is_poll_running = true;
+var ids = [];
+var u_id = {{ Auth::user()-> id }};
+var current_page = 0;
+var slug = "{{ isset($slug) ? $slug:"
+"}}";
+
+var pdf = "{{ url('/') }}/public/assets/front/images/site_images/";
+
+var scroll_height = document.body.scrollHeight - 110;
+document.querySelector("body").style.visibility = "hidden";
+document.querySelector(".preloader").style.visibility = "visible";
+
+if (display_poll == 0) {
+
+    // $(".post-sec-top").addClass("pos-sec-top-hidden");
+}
+
+
+$(document).on("click",".redirect_hall",function(){
+    try{
+        let url = $(this).data("redirect");
+        let number = $(this).data("number");
+        let type = $(this).data("type");
+        let hall_slug = "{{$hall_details->slug }}";
+        $.ajax({
+                type: "POST",
+                url: "{{route('create_log')}}",
+                data: {
+                    hall_slug: hall_slug,
+                    number: number,
+                    type: type,
+                    _token: "{{csrf_token()}}"
+                },
+                success: function(data) {
+                    if(type != "pdf")
+                    window.location.href= url;
+                }
+            });
+    }catch(e){
+        window.open(url, "_blank");
+    }
+
+})
+
+function setTitle(p) {
+    var q_title = $(".title_" + current_page).html();
+    //   alert(q_title);
+    $("#poll-quiz-title").html(q_title);
+}
+
+function changeQuestion(index) {
+    console.log(index);
+    createPagination(pages, index);
+    $(".single-quiz").addClass("hide");
+    $(".current_" + index).removeClass("hide");
+    current_page = index;
+
+    setTitle(current_page);
+}
+
+function resetQuizIndex() {
+    for (i = 1; i <= 50; i++) {
+        $("#answerList div").removeClass("current_" + i);
+        $("#answerList div span.title").removeClass("title_" + i);
+    }
+    var index = 0;
+    $("#answerList div").each(function(index_, value) {
+        if (!$(this).hasClass("is-hidden")) {
+            $(this).addClass("current_" + (index + 1));
+            $(this).find("span.title").addClass("title_" + (index + 1));
+            index++;
+        }
+    });
+    var current_p = $("#pagination ul li.active a").text();
+    current_p = current_p.replace("Next","");
+    current_p = current_p.replace("Previous","");
+    current_p = current_p.replace("next","");
+    current_p = current_p.replace("previous","");
+    if (current_p == "") {
+        current_p = $("#pagination ul li:last a").text();
+    }
+    
+
+    current_p = parseInt(current_p);
+
+    changeQuestion(current_p);
+}
+
+
+// $(".poll1").trigger("click");
+document.onreadystatechange = function() {
+    // if (document.readyState !== "complete") {
+    //     document.querySelector(
+    //       "body").style.visibility = "hidden";
+    //     document.querySelector(
+    //       "#loader").style.visibility = "visible";
+    // } else {
+    //     document.querySelector(
+    //       "#loader").style.display = "none";
+    //     document.querySelector(
+    //       "body").style.visibility = "visible";
+    // }
+};
+
+const GIF = function () {
+    // **NOT** for commercial use.
+    var timerID;                          // timer handle for set time out usage
+    var st;                               // holds the stream object when loading.
+    var interlaceOffsets  = [0, 4, 2, 1]; // used in de-interlacing.
+    var interlaceSteps    = [8, 8, 4, 2];
+    var interlacedBufSize;  // this holds a buffer to de interlace. Created on the first frame and when size changed
+    var deinterlaceBuf;
+    var pixelBufSize;    // this holds a buffer for pixels. Created on the first frame and when size changed
+    var pixelBuf;
+    const GIF_FILE = { // gif file data headers
+        GCExt   : 0xF9,
+        COMMENT : 0xFE,
+        APPExt  : 0xFF,
+        UNKNOWN : 0x01, // not sure what this is but need to skip it in parser
+        IMAGE   : 0x2C,
+        EOF     : 59,   // This is entered as decimal
+        EXT     : 0x21,
+    };
+    // simple buffered stream used to read from the file
+    var Stream = function (data) {
+        this.data = new Uint8ClampedArray(data);
+        this.pos  = 0;
+        var len   = this.data.length;
+        this.getString = function (count) { // returns a string from current pos of len count
+            var s = "";
+            while (count--) { s += String.fromCharCode(this.data[this.pos++]) }
+            return s;
+        };
+        this.readSubBlocks = function () { // reads a set of blocks as a string
+            var size, count, data  = "";
+            do {
+                count = size = this.data[this.pos++];
+                while (count--) { data += String.fromCharCode(this.data[this.pos++]) }
+            } while (size !== 0 && this.pos < len);
+            return data;
+        }
+        this.readSubBlocksB = function () { // reads a set of blocks as binary
+            var size, count, data = [];
+            do {
+                count = size = this.data[this.pos++];
+                while (count--) { data.push(this.data[this.pos++]);}
+            } while (size !== 0 && this.pos < len);
+            return data;
+        }
+    };
+    // LZW decoder uncompressed each frames pixels
+    // this needs to be optimised.
+    // minSize is the min dictionary as powers of two
+    // size and data is the compressed pixels
+    function lzwDecode(minSize, data) {
+        var i, pixelPos, pos, clear, eod, size, done, dic, code, last, d, len;
+        pos = pixelPos = 0;
+        dic      = [];
+        clear    = 1 << minSize;
+        eod      = clear + 1;
+        size     = minSize + 1;
+        done     = false;
+        while (!done) { // JavaScript optimisers like a clear exit though I never use 'done' apart from fooling the optimiser
+            last = code;
+            code = 0;
+            for (i = 0; i < size; i++) {
+                if (data[pos >> 3] & (1 << (pos & 7))) { code |= 1 << i }
+                pos++;
+            }
+            if (code === clear) { // clear and reset the dictionary
+                dic = [];
+                size = minSize + 1;
+                for (i = 0; i < clear; i++) { dic[i] = [i] }
+                dic[clear] = [];
+                dic[eod] = null;
+            } else {
+                if (code === eod) {  done = true; return }
+                if (code >= dic.length) { dic.push(dic[last].concat(dic[last][0])) }
+                else if (last !== clear) { dic.push(dic[last].concat(dic[code][0])) }
+                d = dic[code];
+                len = d.length;
+                for (i = 0; i < len; i++) { pixelBuf[pixelPos++] = d[i] }
+                if (dic.length === (1 << size) && size < 12) { size++ }
+            }
+        }
+    };
+    function parseColourTable(count) { // get a colour table of length count  Each entry is 3 bytes, for RGB.
+        var colours = [];
+        for (var i = 0; i < count; i++) { colours.push([st.data[st.pos++], st.data[st.pos++], st.data[st.pos++]]) }
+        return colours;
+    }
+    function parse (){        // read the header. This is the starting point of the decode and async calls parseBlock
+        var bitField;
+        st.pos                += 6;
+        gif.width             = (st.data[st.pos++]) + ((st.data[st.pos++]) << 8);
+        gif.height            = (st.data[st.pos++]) + ((st.data[st.pos++]) << 8);
+        bitField              = st.data[st.pos++];
+        gif.colorRes          = (bitField & 0b1110000) >> 4;
+        gif.globalColourCount = 1 << ((bitField & 0b111) + 1);
+        gif.bgColourIndex     = st.data[st.pos++];
+        st.pos++;                    // ignoring pixel aspect ratio. if not 0, aspectRatio = (pixelAspectRatio + 15) / 64
+        if (bitField & 0b10000000) { gif.globalColourTable = parseColourTable(gif.globalColourCount) } // global colour flag
+        setTimeout(parseBlock, 0);
+    }
+    function parseAppExt() { // get application specific data. Netscape added iterations and terminator. Ignoring that
+        st.pos += 1;
+        if ('NETSCAPE' === st.getString(8)) { st.pos += 8 }  // ignoring this data. iterations (word) and terminator (byte)
+        else {
+            st.pos += 3;            // 3 bytes of string usually "2.0" when identifier is NETSCAPE
+            st.readSubBlocks();     // unknown app extension
+        }
+    };
+    function parseGCExt() { // get GC data
+        var bitField;
+        st.pos++;
+        bitField              = st.data[st.pos++];
+        gif.disposalMethod    = (bitField & 0b11100) >> 2;
+        gif.transparencyGiven = bitField & 0b1 ? true : false; // ignoring bit two that is marked as  userInput???
+        gif.delayTime         = (st.data[st.pos++]) + ((st.data[st.pos++]) << 8);
+        gif.transparencyIndex = st.data[st.pos++];
+        st.pos++;
+    };
+    function parseImg() {                           // decodes image data to create the indexed pixel image
+        var deinterlace, frame, bitField;
+        deinterlace = function (width) {                   // de interlace pixel data if needed
+            var lines, fromLine, pass, toline;
+            lines = pixelBufSize / width;
+            fromLine = 0;
+            if (interlacedBufSize !== pixelBufSize) {      // create the buffer if size changed or undefined.
+                deinterlaceBuf = new Uint8Array(pixelBufSize);
+                interlacedBufSize = pixelBufSize;
+            }
+            for (pass = 0; pass < 4; pass++) {
+                for (toLine = interlaceOffsets[pass]; toLine < lines; toLine += interlaceSteps[pass]) {
+                    deinterlaceBuf.set(pixelBuf.subArray(fromLine, fromLine + width), toLine * width);
+                    fromLine += width;
+                }
+            }
+        };
+        frame                = {}
+        gif.frames.push(frame);
+        frame.disposalMethod = gif.disposalMethod;
+        frame.time           = gif.length;
+        frame.delay          = gif.delayTime * 10;
+        gif.length          += frame.delay;
+        if (gif.transparencyGiven) { frame.transparencyIndex = gif.transparencyIndex }
+        else { frame.transparencyIndex = undefined }
+        frame.leftPos = (st.data[st.pos++]) + ((st.data[st.pos++]) << 8);
+        frame.topPos  = (st.data[st.pos++]) + ((st.data[st.pos++]) << 8);
+        frame.width   = (st.data[st.pos++]) + ((st.data[st.pos++]) << 8);
+        frame.height  = (st.data[st.pos++]) + ((st.data[st.pos++]) << 8);
+        bitField      = st.data[st.pos++];
+        frame.localColourTableFlag = bitField & 0b10000000 ? true : false;
+        if (frame.localColourTableFlag) { frame.localColourTable = parseColourTable(1 << ((bitField & 0b111) + 1)) }
+        if (pixelBufSize !== frame.width * frame.height) { // create a pixel buffer if not yet created or if current frame size is different from previous
+            pixelBuf     = new Uint8Array(frame.width * frame.height);
+            pixelBufSize = frame.width * frame.height;
+        }
+        lzwDecode(st.data[st.pos++], st.readSubBlocksB()); // decode the pixels
+        if (bitField & 0b1000000) {                        // de interlace if needed
+            frame.interlaced = true;
+            deinterlace(frame.width);
+        } else { frame.interlaced = false }
+        processFrame(frame);                               // convert to canvas image
+    };
+    function processFrame(frame) { // creates a RGBA canvas image from the indexed pixel data.
+        var ct, cData, dat, pixCount, ind, useT, i, pixel, pDat, col, frame, ti;
+        frame.image        = document.createElement('canvas');
+        frame.image.width  = gif.width;
+        frame.image.height = gif.height;
+        frame.image.ctx    = frame.image.getContext("2d");
+        ct = frame.localColourTableFlag ? frame.localColourTable : gif.globalColourTable;
+        if (gif.lastFrame === null) { gif.lastFrame = frame }
+        useT = (gif.lastFrame.disposalMethod === 2 || gif.lastFrame.disposalMethod === 3) ? true : false;
+        if (!useT) { frame.image.ctx.drawImage(gif.lastFrame.image, 0, 0, gif.width, gif.height) }
+        cData = frame.image.ctx.getImageData(frame.leftPos, frame.topPos, frame.width, frame.height);
+        ti  = frame.transparencyIndex;
+        dat = cData.data;
+        if (frame.interlaced) { pDat = deinterlaceBuf }
+        else { pDat = pixelBuf }
+        pixCount = pDat.length;
+        ind = 0;
+        for (i = 0; i < pixCount; i++) {
+            pixel = pDat[i];
+            col   = ct[pixel];
+            if (ti !== pixel) {
+                dat[ind++] = col[0];
+                dat[ind++] = col[1];
+                dat[ind++] = col[2];
+                dat[ind++] = 255;      // Opaque.
+            } else
+                if (useT) {
+                    dat[ind + 3] = 0; // Transparent.
+                    ind += 4;
+                } else { ind += 4 }
+        }
+        frame.image.ctx.putImageData(cData, frame.leftPos, frame.topPos);
+        gif.lastFrame = frame;
+        if (!gif.waitTillDone && typeof gif.onload === "function") { doOnloadEvent() }// if !waitTillDone the call onload now after first frame is loaded
+    };
+    // **NOT** for commercial use.
+    function finnished() { // called when the load has completed
+        gif.loading           = false;
+        gif.frameCount        = gif.frames.length;
+        gif.lastFrame         = null;
+        st                    = undefined;
+        gif.complete          = true;
+        gif.disposalMethod    = undefined;
+        gif.transparencyGiven = undefined;
+        gif.delayTime         = undefined;
+        gif.transparencyIndex = undefined;
+        gif.waitTillDone      = undefined;
+        pixelBuf              = undefined; // dereference pixel buffer
+        deinterlaceBuf        = undefined; // dereference interlace buff (may or may not be used);
+        pixelBufSize          = undefined;
+        deinterlaceBuf        = undefined;
+        gif.currentFrame      = 0;
+        if (gif.frames.length > 0) { gif.image = gif.frames[0].image }
+        doOnloadEvent();
+        if (typeof gif.onloadall === "function") {
+            (gif.onloadall.bind(gif))({   type : 'loadall', path : [gif] });
+        }
+        if (gif.playOnLoad) { gif.play() }
+    }
+    function canceled () { // called if the load has been cancelled
+        finnished();
+        if (typeof gif.cancelCallback === "function") { (gif.cancelCallback.bind(gif))({ type : 'canceled', path : [gif] }) }
+    }
+    function parseExt() {              // parse extended blocks
+        const blockID = st.data[st.pos++];
+        if(blockID === GIF_FILE.GCExt) { parseGCExt() }
+        else if(blockID === GIF_FILE.COMMENT) { gif.comment += st.readSubBlocks() }
+        else if(blockID === GIF_FILE.APPExt) { parseAppExt() }
+        else {
+            if(blockID === GIF_FILE.UNKNOWN) { st.pos += 13; } // skip unknow block
+            st.readSubBlocks();
+        }
+
+    }
+    function parseBlock() { // parsing the blocks
+        if (gif.cancel !== undefined && gif.cancel === true) { canceled(); return }
+
+        const blockId = st.data[st.pos++];
+        if(blockId === GIF_FILE.IMAGE ){ // image block
+            parseImg();
+            if (gif.firstFrameOnly) { finnished(); return }
+        }else if(blockId === GIF_FILE.EOF) { finnished(); return }
+        else { parseExt() }
+        if (typeof gif.onprogress === "function") {
+            gif.onprogress({ bytesRead  : st.pos, totalBytes : st.data.length, frame : gif.frames.length });
+        }
+        setTimeout(parseBlock, 0); // parsing frame async so processes can get some time in.
+    };
+    function cancelLoad(callback) { // cancels the loading. This will cancel the load before the next frame is decoded
+        if (gif.complete) { return false }
+        gif.cancelCallback = callback;
+        gif.cancel         = true;
+        return true;
+    }
+    function error(type) {
+        if (typeof gif.onerror === "function") { (gif.onerror.bind(this))({ type : type, path : [this] }) }
+        gif.onload  = gif.onerror = undefined;
+        gif.loading = false;
+    }
+    function doOnloadEvent() { // fire onload event if set
+        gif.currentFrame = 0;
+        gif.nextFrameAt  = gif.lastFrameAt  = new Date().valueOf(); // just sets the time now
+        if (typeof gif.onload === "function") { (gif.onload.bind(gif))({ type : 'load', path : [gif] }) }
+        gif.onerror = gif.onload  = undefined;
+    }
+    function dataLoaded(data) { // Data loaded create stream and parse
+        st = new Stream(data);
+        parse();
+    }
+    function loadGif(filename) { // starts the load
+        var ajax = new XMLHttpRequest();
+        ajax.responseType = "arraybuffer";
+        ajax.onload = function (e) {
+            if (e.target.status === 404) { error("File not found") }
+            else if(e.target.status >= 200 && e.target.status < 300 ) { dataLoaded(ajax.response) }
+            else { error("Loading error : " + e.target.status) }
+        };
+        ajax.open('GET', filename, true);
+        ajax.send();
+        ajax.onerror = function (e) { error("File error") };
+        this.src = filename;
+        this.loading = true;
+    }
+    function play() { // starts play if paused
+        if (!gif.playing) {
+            gif.paused  = false;
+            gif.playing = true;
+            playing();
+        }
+    }
+    function pause() { // stops play
+        gif.paused  = true;
+        gif.playing = false;
+        clearTimeout(timerID);
+    }
+    function togglePlay(){
+        if(gif.paused || !gif.playing){ gif.play() }
+        else{ gif.pause() }
+    }
+    function seekFrame(frame) { // seeks to frame number.
+        clearTimeout(timerID);
+        gif.currentFrame = frame % gif.frames.length;
+        if (gif.playing) { playing() }
+        else { gif.image = gif.frames[gif.currentFrame].image }
+    }
+    function seek(time) { // time in Seconds  // seek to frame that would be displayed at time
+        clearTimeout(timerID);
+        if (time < 0) { time = 0 }
+        time *= 1000; // in ms
+        time %= gif.length;
+        var frame = 0;
+        while (time > gif.frames[frame].time + gif.frames[frame].delay && frame < gif.frames.length) {  frame += 1 }
+        gif.currentFrame = frame;
+        if (gif.playing) { playing() }
+        else { gif.image = gif.frames[gif.currentFrame].image}
+    }
+    function playing() {
+        var delay;
+        var frame;
+        if (gif.playSpeed === 0) {
+            gif.pause();
+            return;
+        } else {
+            if (gif.playSpeed < 0) {
+                gif.currentFrame -= 1;
+                if (gif.currentFrame < 0) {gif.currentFrame = gif.frames.length - 1 }
+                frame = gif.currentFrame;
+                frame -= 1;
+                if (frame < 0) {  frame = gif.frames.length - 1 }
+                delay = -gif.frames[frame].delay * 1 / gif.playSpeed;
+            } else {
+                gif.currentFrame += 1;
+                gif.currentFrame %= gif.frames.length;
+                delay = gif.frames[gif.currentFrame].delay * 1 / gif.playSpeed;
+            }
+            gif.image = gif.frames[gif.currentFrame].image;
+            timerID = setTimeout(playing, delay);
+        }
+    }
+    var gif = {                      // the gif image object
+        onload         : null,       // fire on load. Use waitTillDone = true to have load fire at end or false to fire on first frame
+        onerror        : null,       // fires on error
+        onprogress     : null,       // fires a load progress event
+        onloadall      : null,       // event fires when all frames have loaded and gif is ready
+        paused         : false,      // true if paused
+        playing        : false,      // true if playing
+        waitTillDone   : true,       // If true onload will fire when all frames loaded, if false, onload will fire when first frame has loaded
+        loading        : false,      // true if still loading
+        firstFrameOnly : false,      // if true only load the first frame
+        width          : null,       // width in pixels
+        height         : null,       // height in pixels
+        frames         : [],         // array of frames
+        comment        : "",         // comments if found in file. Note I remember that some gifs have comments per frame if so this will be all comment concatenated
+        length         : 0,          // gif length in ms (1/1000 second)
+        currentFrame   : 0,          // current frame.
+        frameCount     : 0,          // number of frames
+        playSpeed      : 1,          // play speed 1 normal, 2 twice 0.5 half, -1 reverse etc...
+        lastFrame      : null,       // temp hold last frame loaded so you can display the gif as it loads
+        image          : null,       // the current image at the currentFrame
+        playOnLoad     : true,       // if true starts playback when loaded
+        // functions
+        load           : loadGif,    // call this to load a file
+        cancel         : cancelLoad, // call to stop loading
+        play           : play,       // call to start play
+        pause          : pause,      // call to pause
+        seek           : seek,       // call to seek to time
+        seekFrame      : seekFrame,  // call to seek to frame
+        togglePlay     : togglePlay, // call to toggle play and pause state
+    };
+    return gif;
+}
+
+function isMobileDevice() {
+    var isMobile = false;
+    if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|ipad|iris|kindle|Android|Silk|lge |maemo|midp|mmp|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows (ce|phone)|xda|xiino/i
+        .test(navigator.userAgent) ||
+        /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i
+        .test(navigator.userAgent.substr(0, 4))) {
+        isMobile = true;
+    }
+    return isMobile;
+}
+
+$(document).ready(function() {
+    $('.showpdf').magnificPopup({
+        disableOn: 700,
+        type: 'iframe',
+        mainClass: 'mfp-fade',
+        removalDelay: 160,
+        preloader: false,
+
+        fixedContentPos: false
+    });
+    
+setInterval(() => {
+    updateLiveUser();
+}, 15000);
+    $(window).on("orientationchange", function(event) {
+        $(".mainDiv").css("display", "none");
+        location.reload();
+        // document.querySelector(
+        //       "body").style.visibility = "hidden";
+        //     document.querySelector(
+        //       "#loader").style.visibility = "visible";
+    });
+    @if($should_display_speakers_option)
+    $("#speaker").autocomplete({
+        source: "{{route('speaker_ajax')}}?h=" + slug,
+        minLength: 0,
+        select: function(event, ui) {
+            if (!isMobileDevice()) {
+                // console.log("hi");
+                $("#comment").focus();
+            }
+        }
+    }).focus(function() {
+        $(this).autocomplete("search", $(this).val());
+    });
+    @endif
+
+
+
+    // $(window).resize(function(){
+
+    //         document.querySelector(
+    //           "body").style.visibility = "hidden";
+    //         document.querySelector(
+    //           "#loader").style.visibility = "visible";
+
+
+    //     location.reload();
+
+    // });
+
+
+    var change_flag = true;
+
+    //var dropdown_interval = setInterval(function(){ fetchSpeakerAjax() }, 3000);
+
+    function fetchSpeakerAjax() {
+        var value = $("#select1").val();
+        $.ajax({
+            type: "GET",
+            url: "{{route('speaker_ajax')}}",
+            success: function(data) {
+                var html = "";
+                data = data.result;
+                var html = " ";
+
+                html +=
+                    '<option value="" disabled="" selected=""> - Select Speaker To Ask -</option>';
+                $.each(data, function(key, item) {
+                    html += '<option value="' + item.id + '">' + item.text + '</option>';
+                });
+                $('.select1').html(html);
+                $(".select1").val(value);
+            }
+        });
+    }
+
+    $(document).on("click", ".select1", function() {
+        //clearInterval(dropdown_interval);
+        if (change_flag == true) {
+            fetchSpeakerAjax();
+        }
+        change_flag = true;
+    });
+
+    $(".select1").on("change", function() {
+        change_flag = false;
+        var value = $(this).val();
+        $(this).val(value);
+    });
+
+    // alert("hi");
+    $('.next-hall-btn').click(function(e){
+        e.preventDefault();
+        window.location.href = '{{ $next_hall_url}}';
+        return true;
+    });
+    $('.previous-hall-btn').click(function(e){
+        e.preventDefault();
+        window.location.href = '{{ $previous_hall_url}}';
+        return true;
+    });
+    $(".openPopup").click(function() {
+        // $(".modal-body").html("");
+        var value = $(this).attr("data-value");
+        // alert(pdf);
+
+        // var html = `<iframe class="mobile-pdf" scrolling="auto" src="https://drive.google.com/viewerng/viewer?embedded=true&url=${pdf}${value}" width="100%" height="${scroll_height}" type='application/pdf' title="Title"></iframe>`;
+     // var html = `<object data="${pdf}${value}#view=Fit" type="application/pdf" width="100%" height="${scroll_height}"></object>`;
+     // var html="<h1>Chirag</h1>";old
+
+     var html = `<iframe class="desktop-pdf" scrolling="auto" src="${pdf}${value}" width="100%" height="${scroll_height}" type="application/pdf" title="Title"></iframe>
+        <iframe class="mobile-pdf" scrolling="auto" src="https://drive.google.com/viewerng/viewer?embedded=true&url=${pdf}${value}" width="100%" height="${scroll_height}" type='application/pdf' title="Title">`;
+
+
+        $("#modelBody").html(html);
+
+        $('#exampleModal').modal('toggle');
+
+    });
+
+        function getScrollbarWidth() {
+
+  // Creating invisible container
+  const outer = document.createElement('div');
+  outer.style.visibility = 'hidden';
+  outer.style.overflow = 'scroll'; // forcing scrollbar to appear
+  outer.style.msOverflowStyle = 'scrollbar'; // needed for WinJS apps
+  document.body.appendChild(outer);
+
+  // Creating inner element and placing it in the container
+  const inner = document.createElement('div');
+  outer.appendChild(inner);
+
+  // Calculating difference between container's full width and the child width
+  const scrollbarWidth = (outer.offsetWidth - inner.offsetWidth);
+
+  // Removing temporary elements from the DOM
+  outer.parentNode.removeChild(outer);
+
+  return scrollbarWidth;
+
+}
+
+
+ var scree_width = document.body.scrollWidth;
+    // var screen_height =$(document).height()-footer_height;
+    var screen_height = window.innerHeight;
+
+    var main_height = parseInt("{{ $settings_result['main_image_height'] }}");
+    var main_image_width = parseInt("{{ $settings_result['main_image_width'] }}");
+
+    var target_width = scree_width;
+    var target_height = scree_width * main_height / main_image_width;
+
+    var scroll_width = getScrollbarWidth();
+    if(target_height <= screen_height){
+        scroll_width = 0;
+    }
+
+    img.width = target_width - scroll_width;
+
+    img.height = target_height;
+
+
+    var img1=new Image();
+    // img1.onload=start;
+    // img1.onerror=function(){alert(img1.src+' failed to load.');};
+    img1.src= img.src;
+
+    console.log("target"+target_width+"px");
+    console.log("target"+getScrollbarWidth()+"px");
+   function displayPlayer() {
+
+        var footer_height = $(".footer").height() + 10;
+        var scree_width = document.body.scrollWidth;
+        var screen_height = window.innerHeight;
+
+
+        var source_canvas_height = parseInt("{{ $value['canvas_height']}}");
+        var source_canvas_width = parseInt("{{ $value['canvas_width']}}");
+        var source_canvas_ratio = source_canvas_width / source_canvas_height;
+
+        var hall_height = parseInt("{{ $hall_image_height }}");
+        var hall_image_width = parseInt("{{ $hall_image_width }}");
+        var hall_image_ratio = hall_image_width / hall_height;
+
+
+        var target_width = scree_width;
+        var target_height = target_width / hall_image_ratio;
+
+        /*console.log("screen resolution");
+             console.log(scree_width+" width");
+             console.log(screen_height+ " height");
+
+             console.log("image");
+             console.log(target_width+" width");
+             console.log(target_height+ " height");
+
+              console.log("resolution");
+              console.log(source_canvas_width+" width");
+              console.log(source_canvas_height+ " height");*/
+
+        // img.width = target_width;
+        // img.height = target_height;
+
+        // if(is_gif){
+
+        //     img_gif = GIF();
+        //     img_gif.load(img.src);
+        //     img_gif.onloadall = function(e){
+        //         ctx.drawImage(img_gif.image, 0, 0, img_gif.frames[0].image.width, img_gif.frames[0].image.height, 0, 0, canvas.width, canvas.height);
+        //     }
+
+        // }
+        // else
+        //     ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+
+        current_canvas_width = target_width;
+        current_canvas_height = target_height;
+        $(".insideDiv").each(function(index, item) {
+
+
+            var source_player_x = parseFloat($(this).attr("data-x"));
+            var source_player_y = parseFloat($(this).attr("data-y"));
+            var source_player_width = parseFloat($(this).attr("data-w"));
+            var source_player_height = parseFloat($(this).attr("data-h"));
+
+            console.log("source_player_x:" + source_player_x);
+            console.log("source_player_y:" + source_player_y);
+
+            console.log("source_player_width:" + source_player_width);
+            console.log("source_player_height:" + source_player_height);
+
+            console.log("source_canvas_width:" + source_canvas_width);
+            console.log("source_canvas_height:" + source_canvas_height);
+
+            console.log("current_canvas_width:" + current_canvas_width);
+            console.log("current_canvas_height:" + current_canvas_height);
+
+            var new_top_x = source_player_x * current_canvas_width / source_canvas_width;
+            var new_top_y = source_player_y * current_canvas_height / source_canvas_height;
+
+            var new_width = source_player_width * current_canvas_width / source_canvas_width;
+            var new_height = source_player_height * current_canvas_height / source_canvas_height;
+
+            $(this).removeClass("d-none");
+            $(this).css("top", parseFloat(new_top_y) + "px");
+            $(this).css("left", parseFloat(new_top_x) + "px");
+            $(this).css("width", parseFloat(new_width) + "px");
+            $(this).css("height", parseFloat(new_height) + "px");
+        });
+    }
+    displayPlayer();
+    setTimeout(function() {
+        displayPlayer();
+    }, 2000);
+    document.querySelector(".preloader").style.display = "none";
+    document.querySelector("body").style.visibility = "visible";
+ $(".insideDiv").each(function(index, item) {
+
+        var img_x = parseFloat($(this).attr("data-x"));
+        var img_y = parseFloat($(this).attr("data-y"));
+        var canvas_width = parseFloat($(this).attr("data-image-w"));
+        var canvas_height = parseFloat($(this).attr("data-image-h"));
+
+        var img_width = parseFloat($(this).attr("data-w"));
+        var img_height = parseFloat($(this).attr("data-h"));
+
+        var img_bottom_x = img_x + img_width;
+        var img_bottom_y = img_y + img_height;
+
+        var new_top_x = img_x * target_width / canvas_width;
+        var new_top_y = (img_y * target_height / canvas_height);
+
+        var new_bottom_x = img_bottom_x * target_width / canvas_width;
+        var new_bottom_y = img_bottom_y * target_height / canvas_height;
+
+        var new_width = (new_bottom_x - new_top_x);
+        var new_height = (new_bottom_y - new_top_y);
+
+        //new_top_x=new_top_x+(new_width/2);
+
+        // new_top_y=new_top_y+(new_height/2);
+
+        $(this).removeClass("d-none");
+        $(this).css("top", new_top_y + "px");
+        $(this).css("left", new_top_x + "px");
+        $(this).css("width", new_width + "px");
+        $(this).css("height", new_height + "px");
+
+        var type = $(this).attr("data-type");
+        if (type == "selfie") {
+            $(".seflie").css("top", new_top_y + "px");
+            $(".seflie").css("left", new_top_x + "px");
+            $(".seflie").css("width", new_width + "px");
+            $(".seflie").css("height", new_height + "px");
+        }
+
+    })
+    /*Comment send*/
+    $("#comment_send").click(function() {
+        // alert();
+
+        var comment = $.trim($('#comment').val());
+        var speaker = $('#speaker').val();
+        var hall_slug = "{{$hall_details->slug }}";
+
+        if (speaker == "undefined") {
+            speaker = "";
+        }
+
+
+        if (comment != "") {
+            var user_id = "{{\Auth::user()->id}}";
+            $.ajax({
+                type: "POST",
+                url: "{{route('do_comment')}}",
+                data: {
+                    hall_slug: hall_slug,
+                    comment: comment,
+                    speaker: speaker,
+                    user_id: user_id,
+                    _token: "{{csrf_token()}}"
+                },
+                success: function(data) {
+
+                    $(".success").removeClass("hide");
+                    $(".success").text(data.message).css("color", "green");
+                    $('.success').fadeIn('slow', function() {
+                        $('.success').delay(2000).fadeOut();
+                    });
+                    $('#comment').val("");
+                    $("#speaker").val("");
+                    $("#comment").focus();
+                }
+            });
+        } else {
+            $(".errors").removeClass("hide");
+            $(".errors").text('This field is required.').css("color", "red");
+            $('.errors').fadeIn('slow', function() {
+                $('.errors').delay(2000).fadeOut();
+            });
+            $("#comment").focus();
+        }
+    });
+
+    $(".session-logout").on("click", function(e) {
+        e.preventDefault();
+        var href = $(this).attr("href");
+        Swal.fire({
+            title: 'Do you want to logout?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: theme_front_color,
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes!'
+        }).then((result) => {
+            console.log(result);
+            if (result.value) {
+
+                window.location = href;
+            } else {
+                return false;
+            }
+        })
+    });
+
+    function giveQuizAnswer(answer) {
+        var url = "{{ route('quiz_give_answer') }}" + "/" + answer;
+        var tmp = answer.split("_");
+        tmp = tmp[1].split("-");
+        var q_id = tmp[0];
+        $(".quiz_" + q_id).attr("disabled", "disabled");
+        $(".quiz-answer_" + q_id).attr("data-disabled", "1");
+
+        $.ajax({
+            url: url,
+            type: "GET",
+            success: function(data) {
+                var id = data.id;
+                $(".quiz_" + id).attr("disabled", "disabled");
+                $(".quiz-answer_" + id).attr("data-disabled", "1");
+
+
+                if (data.is_poll) {
+                    $.each(data.poll_info, function(index, item) {
+                        $("#" + item.id).html(item.text);
+                    })
+                } else {
+                    if (data.is_correct_answer)
+                        $("." + answer).parent().addClass("correct-answer");
+                    else {
+                        $("." + answer).parent().addClass("in-correct-answer");
+                        $("." + data.correct_answer_id).parent().addClass("correct-answer");
+                    }
+                }
+            },
+            failure: function(data) {
+                $(".quiz_" + q_id).removeAttr("disabled");
+            }
+        })
+    }
+
+    function fetchQuizURL() {
+        var nonce = new Date().getTime();
+        var url_ = "{{ route('quiz_file_url') }}/" + slug + "?nonce=" + nonce;
+        $.ajax({
+            url: url_,
+            type: "GET",
+            success: function(data) {
+                quiz_url = data;
+                window.setInterval(fetchQuiz, {{ 10 * 1000 }});
+                fetchQuiz();
+            }
+        });
+    }
+
+    var counter = 0;
+    var had_hidden = false;
+
+    function fetchQuiz() {
+        var nonce = new Date().getTime();
+        var url_ = quiz_url + "?nonce=" + nonce;
+        // alert(url_);
+        if (is_poll_running) {
+
+            $.ajax({
+                url: url_,
+                type: "GET",
+                contentType: "application/json",
+                success: function(data) {
+                    console.log(data);
+                    is_poll_running = data.is_poll_running;
+
+                    if (is_poll_running) {
+                        var quiz_data = data.quiz_data;
+                        var html_ = '';
+                        var user_answers = data.quiz_answer_data[u_id];
+
+                        var quiz_ids = [];
+                        var last_quiz_length = ids.length;
+                        var hidden_quiz_count = 0;
+                        var has_changed = false;
+
+                        $.each(quiz_data, function(index, item) {
+                            var id = item.id;
+                            var type = item.type;
+                            var status = item.status;
+                            var pos = ids.indexOf(id);
+                            quiz_ids.push(id);
+                            if (pos == -1) {
+
+                                var title = item.title;
+                                html_ += singleQuiz((counter++), item, user_answers, data);
+                                has_changed = true;
+                            }
+                            if (item.is_hidden) {
+                                hidden_quiz_count++;
+                                had_hidden = true;
+                            }
+                        });
+
+                        var should_reload = false;
+                        ids_len = ids.length - hidden_quiz_count;
+
+                        var hidden_quiz_count = 0;
+                        $.each(quiz_data, function(index, item) {
+                            if (item.is_hidden) {
+                                hidden_quiz_count++;
+                            }
+                        });
+
+                        pages = quiz_data.length - hidden_quiz_count;
+
+                        if (quiz_data.length > 0) {
+                            if (current_page == 0) {
+                                current_page = 1;
+                                console.log(createPagination(quiz_data.length - hidden_quiz_count,
+                                    current_page));
+                                document.getElementById('pagination').innerHTML = createPagination(
+                                    pages, current_page);
+                                resetQuizIndex();
+                                /*}else if(last_quiz_length != ids_len){*/
+                            } else if (has_changed) {
+                                should_reload = true;
+                                document.getElementById('pagination').innerHTML = createPagination(
+                                    pages, current_page);
+                                resetQuizIndex();
+                            } else if (had_hidden && hidden_quiz_count == 0) {
+                                should_reload = true;
+                                document.getElementById('pagination').innerHTML = createPagination(
+                                    pages, current_page);
+                                resetQuizIndex();
+                                had_hidden = false;
+                            }
+                        } else {
+                            $("#poll-quiz-title").html(
+                                "<span style='color:black'>Poll & Quiz Question Will Display Here</span>"
+                                );
+                        }
+                        console.log(html_);
+                        if (html_ !== '') {
+                            $("#answerList").append(html_);
+                            setTitle(current_page);
+                        } else if (html_ == '' && ids_len == 0) {
+                            $("#poll-quiz-title").html("");
+                            $("#poll-quiz-title").html(
+                                "<span style='color:black'>Poll & Quiz Question Will Display Here</span>"
+                                );
+                        }
+
+
+                        $.each(quiz_data, function(index, item) {
+                            var id = item.id;
+                            var status = item.status;
+
+
+                            pol_users = data.quiz_pol_users[id];
+                            is_poll_given = false;
+                            if (typeof pol_users !== 'undefined') {
+                                if (pol_users.indexOf(u_id) >= 0)
+                                    is_poll_given = true;
+
+                            }
+
+
+                            if (is_poll_given || status == 'stopped') {
+                                $("#single_" + id).find("input").attr("disabled",
+                                    "disabled");
+                                $("#single_" + id + " .quiz-answer").attr("data-disabled", (
+                                    status == 'stopped' ? "2" : "1"));
+
+                                if (item.is_poll) {
+                                    $.each(item.answers, function(index_, answer) {
+                                        $("#" + answer.id).html(answer.poll_title);
+                                    });
+                                }
+                            }
+                            id = "single_" + item.id;
+
+                            if (item.is_hidden) {
+                                should_reload = true;
+                                $("#" + id).addClass("hide");
+                                $("#" + id).addClass("is-hidden");
+                            } else if ($("#" + id).hasClass("is-hidden")) {
+                                should_reload = true;
+                                $("#" + id).removeClass("hide");
+                                $("#" + id).removeClass("is-hidden");
+                            }
+                        });
+
+                        $(".current_" + current_page).removeClass("hide");
+                        $("#poll-quiz-title").html($(".title_" + current_page).html());
+                        var remove_ids = [];
+                        $.each(ids, function(index, q_id) {
+                            var pos = quiz_ids.indexOf(q_id);
+                            if (pos == '-1') {
+                                remove_ids.push(index);
+                                should_reload = true;
+                                $("#single_" + q_id).remove();
+                            }
+                        });
+                        if (should_reload) {
+                            document.getElementById('pagination').innerHTML = createPagination(
+                                pages, current_page);
+                            resetQuizIndex();
+                        }
+                        $.each(remove_ids, function(index, r_id) {
+                            //ids.splice(r_id,1);
+                        });
+                        if (pages == 0) {
+                            $("#poll-quiz-title").html("");
+                            $("#poll-quiz-title").html(
+                                "<span style=''>Poll & Quiz Question Will Display Here</span>");
+                        }
+                    } else {
+
+                        html = "<p>No polling available now.</p>";
+                        $("#quiz-error").html(html);
+                    }
+                }
+            });
+        }
+    }
+
+    if (display_poll == 1)
+        fetchQuizURL();
+
+
+    function singleQuiz(index, item, user_answers, data) {
+        var html = '';
+        var disabled = '';
+        var radio_class = '';
+        var id = item.id;
+
+        quiz_answer = '';
+        if (typeof user_answers !== 'undefined')
+            quiz_answer = user_answers[id];
+
+        pol_users = data.quiz_pol_users[id];
+        is_poll_given = false;
+        if (typeof pol_users !== 'undefined') {
+            if (pol_users.indexOf(u_id) >= 0)
+                is_poll_given = true;
+
+        }
+
+        if ((typeof quiz_answer !== 'undefined' && quiz_answer !== '') || status == 'stopped') {
+            disabled = "disabled='disabled'";
+        }
+
+        html += '<div class="hide single-quiz current_' + (index + 1) + '" data-id="' + item.id +
+            '" id="single_' + item.id + '">';
+        html += '<span class="title hide my-hidden hidden title_' + (index + 1) + '" id="title_' + (index + 1) + '">' + item.title +
+            "</span>";
+
+        html += '<ul class="pollbox">';
+
+        $.each(item.answers, function(index_, answer) {
+            radio_class = '';
+            checked = '';
+            if (typeof quiz_answer !== 'undefined') {
+                if (quiz_answer.is_correct_answer && answer.id == quiz_answer.user_answer) {
+                    radio_class = 'correct-answer';
+                    checked = 'checked="checked"';
+                } else {
+                    if (answer.id == quiz_answer.user_answer) {
+                        radio_class = 'in-correct-answer';
+                        checked = 'checked="checked"';
+                    } else if (answer.id == quiz_answer.correct_answer)
+                        radio_class = 'correct-answer';
+                }
+            }
+            if (item.is_poll || status == 'stopped')
+                radio_class = '';
+            var ans = answer.title;
+
+            if (is_poll_given || status == 'stopped')
+                ans = answer.poll_title;
+
+            var data_disable = '';
+            if (disabled != '') {
+                if (status == 'stopped')
+                    data_disable = "2";
+                else
+                    data_disable = "1";
+            }
+
+            html += '<li class="block quiz-answer quiz-answer_' + id + '" data-disabled="' +
+                data_disable + '" data-value="' + answer.id + '">';
+            html += '<input type="radio" ' + disabled + ' ' + checked + ' id="' + item.id + '_' + answer
+                .id + '" name="quiz_' + item.id + '" class="mr-2 quiz_' + item.id + ' ' + answer.id +
+                ' modal-toggle" value="' + answer.id + '" />';
+            html += '<label for="' + item.id + '_' + answer.id + '" class="' + radio_class + '">';
+            html += '<span class="mr-2">' + (String.fromCharCode(65 + index_)) + '.</span>';
+            html += '<span id="' + answer.id + '">' + ans + '</span>';
+            html += '</label>';
+            html += '</li>';
+
+        });
+        html += '</ul>';
+        html += '</div>';
+
+        ids.push(item.id);
+        return html;
+    }
+    $(document).on("click", ".quiz-answer", function() {
+        var answer = $(this).attr("data-value");
+        //   alert(answer);
+        var is_enable = $(this).attr("data-disabled");
+
+        if (is_enable == '' || typeof is_enable === 'undefined') {
+            SweetAlert.fire({
+                title: "Are you sure?",
+                text: "This will not be undone.",
+                type: "warning",
+                showCancelButton: true,
+                cancelButtonText: 'No, cancel!',
+                confirmButtonColor: theme_front_color,
+                confirmButtonText: "Yes, do it!",
+                allowOutsideClick: false,
+            }).then(function(result) {
+                if (result.value) {
+                    giveQuizAnswer(answer);
+                }
+            });
+        } else {
+            if (is_enable == "1") {
+                SweetAlert.fire({
+                    title: "You Already Give Answer of this question!",
+                    text: "Now You can not change It.",
+                    type: "warning",
+                })
+            }
+        }
+    });
+
+    function giveQuizAnswer(answer) {
+        var url = "{{ route('quiz_give_answer') }}" + "/" + answer;
+        var tmp = answer.split("_");
+        tmp = tmp[1].split("-");
+        var q_id = tmp[0];
+        $(".quiz_" + q_id).attr("disabled", "disabled");
+        $(".quiz-answer_" + q_id).attr("data-disabled", "1");
+
+        $.ajax({
+            url: url,
+            type: "GET",
+            success: function(data) {
+                var id = data.id;
+                $(".quiz_" + id).attr("disabled", "disabled");
+                $(".quiz-answer_" + id).attr("data-disabled", "1");
+
+
+                if (data.is_poll) {
+                    $.each(data.poll_info, function(index, item) {
+                        $("#" + item.id).html(item.text);
+                    })
+                } else {
+                    if (data.is_correct_answer)
+                        $("." + answer).parent().addClass("correct-answer");
+                    else {
+                        $("." + answer).parent().addClass("in-correct-answer");
+                        $("." + data.correct_answer_id).parent().addClass("correct-answer");
+                    }
+                }
+            },
+            failure: function(data) {
+                $(".quiz_" + q_id).removeAttr("disabled");
+            }
+        })
+    }
+    function updateLiveUser(){
+        $.ajax({
+          "method":"GET",
+          "url":"{{route('update_live_user')}}",
+          success:function(data){
+
+          }
+        })
+      }
+
+    @if(isset($menu_position->sValue) && $menu_position->sValue!="buttom")
+      $("#download_certificate").click(function () {
+        $.ajax({
+            type: "GET",
+            url: "{{url('download-c/certificate')}}",
+            success: function (data) {
+              if(data.message) {
+                swal({
+                  title: "Not Available!",
+                  text: data.message,
+                  type: "warning",
+                })
+              } else {
+                if(data.path) {
+                  // var blob=new Blob([data]);
+                  var link=document.createElement('a');
+                  var finalURL = "{{ URL::to('/')}}/";
+
+                  link.href= finalURL + data.path;
+                  link.download="certificate." + data.extention;
+                  link.download=data.filename;
+                  link.click();
+                }
+              }
+            }
+        });
+    });
+      @endif
+
+});
+
+ function openSocialLinksModal(){
+        $('#socialModal').modal('toggle');
+    }
+
+    // audi emozi
+        $(document).on('click', '.likebutton', function() {
+            $(this).css('pointer-events', 'none');
+            $('.like_bubble').show();
+            
+            var video_id = $(this).attr('data-videoid');
+            save_emoticons("like", video_id);
+
+            setTimeout(function() {
+                $('.likebutton').css('pointer-events', 'auto');
+                $('.like_bubble').hide();
+            }, 10000);
+        });
+
+        $(document).on('click', '.heartButton', function() {
+            $(this).css('pointer-events', 'none');
+            $('.like_hearts').show();
+            
+            var video_id = $(this).attr('data-videoid');
+            // console.log( $('.heartButton').data('videoid'));
+            save_emoticons("heart", video_id);
+
+            setTimeout(function() {
+                $('.heartButton').css('pointer-events', 'auto');
+                $('.like_hearts').hide();
+            }, 10000);
+        });
+
+        var save_emoticons = function(type, video_id) {
+            /*$.ajax({
+                url: SITE_URL + 'auditoriums/save_team_emoticons',
+                type: 'post',
+                async: false,
+                data: { type: type, video_id: video_id },
+                success: function(response) {}
+            });*/
+        }
+        var clap = document.getElementById("clap");
+        function playAudio1(_this) {
+            clap.play();
+            var video_id = $(_this).attr('data-videoid');
+            save_emoticons("clap", video_id);
+
+            setTimeout(() => {
+                clap.pause();
+                clap.currentTime = 0
+            },5000);
+        }
+
+        var hoot = document.getElementById("hoot");
+        function playAudio2(_this) {
+            hoot.play();
+            var video_id = $(_this).attr('data-videoid');
+            save_emoticons("anoncment", video_id);
+
+            setTimeout(() => {
+                hoot.pause();
+                hoot.currentTime = 0
+            },5000);
+
+        }
+
+         @if ($use_attendence)
+        /* console.log("hiii"); */
+        /* window.onload=function(e){
+             startTimer();
+             $(this).trigger("focus")
+         };*/
+        $(document).ready(function() {
+            startTimer();
+            $(this).trigger("focus")
+        });
+
+        $(window).on("focus blur", function(e) {
+            var prevType = $(this).data("prevType");
+
+            //  reduce double fire issues
+            if (prevType != e.type) {
+
+                switch (e.type) {
+                    case "blur":
+                        //var second = stopTimeFunction();
+                        //sendAjax('blur');
+                        //is_active=false;
+                        break;
+                    case "focus":
+                        is_active = true;
+                        startTimeFunction();
+                        // ajaxCall();
+                        break;
+                }
+            }
+
+            $(this).data("prevType", e.type);
+
+        });
+
+        var startDate = "";
+        var endDate = "";
+        var is_active = true;
+        var is_ajax_started = false;
+
+
+        function startTimeFunction() {
+            startDate = new Date();
+            endDate = "";
+        }
+
+        function stopTimeFunction() {
+            endDate = new Date();
+
+        }
+
+        function startTimer() {
+
+            startTimeFunction();
+            setInterval(function() {
+                stopTimeFunction();
+                sendAjax('cycle');
+
+            }, 15000);
+        }
+
+        function sendAjax(source) {
+
+            if (is_ajax_started == false || source == 'blur') {
+                if (is_active == true && endDate !== '' && startDate !== '') {
+                    is_ajax_started = true;
+                    var time = Math.ceil((endDate.getTime() - startDate.getTime()) / 1000);
+                    $.ajax({
+                        type: 'POST',
+                        url: "{{ route('attendence.store') }}",
+                        data: {
+                            _token: "{{ csrf_token() }}",
+                            time: time,
+                            slug: '{{ $slug }}'
+                        },
+                        success: function(data) {
+                            is_ajax_started = false;
+                            startTimeFunction();
+
+                        }
+                    });
+                }
+            }
+        }
+    @endif
+</script>
+<script>
+$(document).ready(function() {
+    // Swich 200 Tablets button action
+    $('#switchTabletBtn').click(function() {
+        Swal.fire({
+            title: 'Swich 200 Tablets',
+            html: '<p>Swich 200 ke bare mein jankari yahan aayegi...</p>',
+            icon: 'info',
+            confirmButtonColor: theme_front_color,
+            confirmButtonText: 'OK'
+        });
+    });
+    
+    // Sumo-3 button action
+    $('#sumoBtn').click(function() {
+        Swal.fire({
+            title: 'Sumo-3 Information',
+            html: '<p>Sumo-3 ke bare mein jankari yahan aayegi...</p>',
+            icon: 'info',
+            confirmButtonColor: '#28a745',
+            confirmButtonText: 'OK'
+        });
+    });
+});
+</script>
